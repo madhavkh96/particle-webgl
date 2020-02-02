@@ -84,6 +84,7 @@ const PART_DIAM 	  =14;	// on-screen diameter (in pixels)
 const PART_RENDMODE =15;	// on-screen appearance (square, round, or soft-round)
  // Other useful particle values, currently unused
 const PART_AGE      =16;  // # of frame-times until re-initializing (Reeves Fire)
+const PART_SIZE     =17
 /*
 const PART_CHARGE   =17;  // for electrostatic repulsion/attraction
 const PART_MASS_VEL =18;  // time-rate-of-change of mass.
@@ -95,7 +96,7 @@ const PART_R_FTOT   =23;  // force-accumulator for color-change: red
 const PART_G_FTOT   =24;  // force-accumulator for color-change: grn
 const PART_B_FTOT   =25;  // force-accumulator for color-change: blu
 */
-const PART_MAXVAR   =17;  // Size of array in CPart uses to store its values.
+const PART_MAXVAR   =18;  // Size of array in CPart uses to store its values.
 
 
 // Array-Name consts that select PartSys objects' numerical-integration solver:
@@ -175,6 +176,16 @@ PartSys.prototype.roundRand = function() {
 	while(this.randX*this.randX + 
 	      this.randY*this.randY + 
 	      this.randZ*this.randZ >= 1.0); 
+}
+
+
+PartSys.prototype.calculateDistance = function(x_coord, y_coord, z_coord){
+
+  var distance =  Math.sqrt(Math.pow((x_Coordinate - x_coord), 2) + 
+                            Math.pow((y_Coordinate - y_coord), 2) +
+                            Math.pow((z_Coordinate - z_coord), 2))
+
+  return distance; 
 }
 
 // INIT FUNCTIONS:
@@ -440,7 +451,7 @@ PartSys.prototype.initBouncy3D = function(count, shader) {
   this.ModelMatrix = new Matrix4();
   this.uLoc_ModelMatrix = false;
   this.u_runModeID = false;
-  this.uLoc_size = false;
+  this.size = 100.0;
 
 
   gl.program = this.shader;
@@ -468,6 +479,9 @@ PartSys.prototype.initBouncy3D = function(count, shader) {
     this.s1[j + PART_DIAM] =  2.0 + 10*Math.random(); // on-screen diameter, in pixels
     this.s1[j + PART_RENDMODE] = 0.0;
     this.s1[j + PART_AGE] = 30 + 100*Math.random();
+    var distance = this.calculateDistance(this.s1[j + PART_XPOS], this.s1[j + PART_YPOS], this.s1[j + PART_ZPOS])
+    var size = this.size / distance;  
+    this.s1[j + PART_SIZE] = size;
     //----------------------------
     this.s2.set(this.s1);   // COPY contents of state-vector s1 to s2.
   }
@@ -514,7 +528,17 @@ PartSys.prototype.initBouncy3D = function(count, shader) {
                     // 1st stored attrib value we will actually use.
   // Enable this assignment of the bound buffer to the a_Position variable:
   gl.enableVertexAttribArray(this.a_PositionID);
- 
+
+  this.a_SizeID = gl.getAttribLocation(gl.program, 'a_Size');
+  if(this.a_SizeID < 0) {
+    console.log('PartSys.init() Failed to get the storage location of a_Size');
+    return -1;
+  }
+    
+  gl.vertexAttribPointer(this.a_SizeID, 1, gl.FLOAT, false, PART_MAXVAR * this.FSIZE, PART_SIZE * this.FSIZE);
+
+  gl.enableVertexAttribArray(this.a_SizeID);
+
   // ---------Set up all uniforms we send to the GPU:
   // Get graphics system storage location of each uniform our shaders use:
   // (why? see  http://www.opengl.org/wiki/Uniform_(GLSL) )
@@ -528,9 +552,11 @@ PartSys.prototype.initBouncy3D = function(count, shader) {
   if(!this.uLoc_ModelMatrix){
     console.log('PartSys.init() Failed to get u_ModelMat variable location');
   }
+
   // Set the initial values of all uniforms on GPU: (runMode set by keyboard)
   gl.uniform1i(this.u_runModeID, this.runMode);
   gl.uniformMatrix4fv(this.uLoc_ModelMatrix, false, this.ModelMatrix.elements);
+  gl.uniform1f(this.uLoc_size, this.size);
 }
 
 PartSys.prototype.initFireReeves = function(count) {
@@ -700,6 +726,7 @@ PartSys.prototype.dotFinder = function(dest, src) {
     dest[j + PART_DIAM] = 0.0;    // presume these don't change either...   
     dest[j + PART_RENDMODE] = 0.0;
     dest[j + PART_AGE] = 0.0;
+    dest[j + PART_SIZE] = 0.0;
     }
 }
 
@@ -734,6 +761,9 @@ PartSys.prototype.switchToMe = function() {
 
   gl.vertexAttribPointer(this.a_PositionID, 4, gl.FLOAT, false, PART_MAXVAR*this.FSIZE, PART_XPOS * this.FSIZE);
   gl.enableVertexAttribArray(this.a_PositionID);
+
+  gl.vertexAttribPointer(this.a_SizeID, 1, gl.FLOAT, false, PART_MAXVAR*this.FSIZE, PART_SIZE * this.FSIZE);
+  gl.enableVertexAttribArray(this.a_SizeID);
 }
 
 PartSys.prototype.isReady = function() {
@@ -755,9 +785,17 @@ PartSys.prototype.isReady = function() {
 PartSys.prototype.render3D = function(s) {
 
   this.ModelMatrix.setPerspective(30.0, vpAspect, 0.25, 1000.0);
+
   this.ModelMatrix.lookAt(x_Coordinate, y_Coordinate, z_Coordinate,
                               x_lookAt,     y_lookAt,     z_lookAt,
                                      0,            0,            1,);
+  var j = 0;
+  
+  for(var i = 0; i < this.partCount; i+=1, j += PART_MAXVAR) {
+    var distance = this.calculateDistance(this.s1[j + PART_XPOS], this.s1[j + PART_YPOS], this.s1[j + PART_ZPOS])
+    var size = this.size / distance;   
+    this.s2[j + PART_SIZE] = size;
+  } 
 
   this.ModelMatrix.translate(0, 0, 1);
   this.ModelMatrix.rotate(90, 1, 0, 0);
@@ -765,6 +803,9 @@ PartSys.prototype.render3D = function(s) {
   pushMatrix(this.ModelMatrix);
 
   this.ModelMatrix = popMatrix();
+
+
+
 
   gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.s1);
   gl.uniformMatrix4fv(this.uLoc_ModelMatrix, false, this.ModelMatrix.elements);

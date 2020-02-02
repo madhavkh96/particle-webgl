@@ -343,12 +343,12 @@ function particle3D() {
 this.VSHADER_SOURCE_PARTICLE =
   ' precision mediump float;                 \n' + // req'd in OpenGL ES if we use 'float'
   ' uniform    int u_runMode;                \n' + // particle system state: 
-  ' uniform  float u_size;                   \n' +
+  ' attribute float a_Size;                  \n' +
   ' attribute vec4 a_Position;               \n' +
   ' uniform   mat4 u_ModelMat;               \n' +
   ' varying   vec4 v_Color;                  \n' +
   ' void main() {                            \n' +
-  '   gl_PointSize = 20.0;                   \n' +// TRY MAKING THIS LARGER...
+  '   gl_PointSize = a_Size;                 \n' +// TRY MAKING THIS LARGER...
   '   gl_Position = u_ModelMat * a_Position; \n' +  
   '   if(u_runMode == 0) {                   \n' +
   '     v_Color = vec4(1.0, 0.0, 0.0, 1.0);  \n' +   // red: 0==reset

@@ -94,8 +94,8 @@ var y_lookAt =   -2;
 var z_lookAt = 0.25;
 var lookAtVector = new Vector3([x_lookAt, y_lookAt, z_lookAt]);
 var current_rotation = 0;
-var x_Coordinate = 20;
-var y_Coordinate = 5;
+var x_Coordinate = 1;
+var y_Coordinate = 1;
 var z_Coordinate = 0.25;
 var eyePosVector = new Vector3([x_Coordinate, y_Coordinate, z_Coordinate]);
 
