@@ -607,6 +607,13 @@ PartSys.prototype.initFireReeves = function(count, shader) {
     // (and IGNORE all other Cforcer members...)
     this.forceList.push(fTmp);      // append this 'gravity' force object to 
     // the forceList array of force-causing objects.
+    fTmp = new CForcer();
+
+    fTmp.forceType = F_WIND;
+    fTmp.windPosition = new Vector4([1, 0.5, 1, 1]);
+    fTmp.windDirection = new Vector4([0, 1, 0, 1]);
+    fTmp.windForce = 20;
+    this.forceList.push(fTmp);
 
     this.particleSystemType = FIRE;
 
@@ -889,10 +896,14 @@ PartSys.prototype.applyForces = function(s, fList) {
         console.log("PartSys.applyForces(), fList[",k,"].forceType:", 
                                   fList[k].forceType, "NOT YET IMPLEMENTED!!");
        break;
-      case F_WIND:      // Blowing-wind-like force-field; fcn of 3D position
-        console.log("PartSys.applyForces(), fList[",k,"].forceType:", 
-                                  fList[k].forceType, "NOT YET IMPLEMENTED!!");
-        break;
+        case F_WIND:      // Blowing-wind-like force-field; fcn of 3D position
+            var j = m * PART_MAXVAR;
+            for (; m < mmax; m++ , j += PART_MAXVAR) {
+                s[j + PART_X_FTOT] += s[j + PART_MASS] * fList[k].windForce * fList[k].windDirection.elements[0];
+                s[j + PART_Y_FTOT] += s[j + PART_MASS] * fList[k].windForce * fList[k].windDirection.elements[1];
+                s[j + PART_Z_FTOT] += s[j + PART_MASS] * fList[k].windForce * fList[k].windDirection.elements[2];
+            }
+            break;
       case F_BUBBLE:    // Constant inward force (bub_force)to a 3D centerpoint 
                         // bub_ctr if particle is > bub_radius away from it.
         console.log("PartSys.applyForces(), fList[",k,"].forceType:", 
@@ -1348,12 +1359,11 @@ PartSys.prototype.particleBehaviour = function () {
                 var inv_age = 1 / this.s2[j + PART_AGE];
                 this.s2[j + PART_AGE] -= 1;     // decrement lifetime.
                 this.s2[j + PART_SIZE] *= this.s2[j + PART_AGE] * inv_age;
+                this.s2[j + PART_MASS] = this.clamp(0.01, this.s2[j + PART_MASS], this.s2[j + PART_MASS] * 0.5);  
+
                 this.s2[j + PART_R] *= this.clamp(0, 1, this.s2[j + PART_AGE] * inv_age);
                 this.s2[j + PART_G] *= this.clamp(0, 1, this.s2[j + PART_AGE] * inv_age);
-
-                this.s2[j + PART_XVEL] = this.randX * 0.2;
-                this.s2[j + PART_YVEL] = 0.7;
-                this.s2[j + PART_ZVEL] = this.randZ * 0.2;
+                this.s2[j + PART_B] *= this.clamp(0, 1, this.s2[j + PART_AGE] * inv_age);
 
                 if (this.s2[j + PART_AGE] <= 0) { // End of life: RESET this particle!
                     this.roundRand();       // set this.randX,randY,randZ to random location in 
@@ -1371,8 +1381,8 @@ PartSys.prototype.particleBehaviour = function () {
                     this.s2[j + PART_MASS] = 0.2;      // mass, in kg.
                     this.s2[j + PART_DIAM] = this.size; // on-screen diameter, in pixels
                     this.s2[j + PART_RENDMODE] = 0.0;
-                    this.s2[j + PART_R] = 0.5 + Math.random() * 0.5;
-                    this.s2[j + PART_G] = 0.1 + Math.random() * 0.2;
+                    this.s2[j + PART_R] = 0.9 + Math.random() * 0.1;
+                    this.s2[j + PART_G] = 0.2 + Math.random() * 0.3;
                     this.s2[j + PART_B] = 0.1;
                     this.s2[j + PART_AGE] = 30 + 100 * Math.random();
                     this.s2[j + PART_SIZE] = 10;
