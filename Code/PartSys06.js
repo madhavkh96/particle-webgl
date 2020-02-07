@@ -98,7 +98,6 @@ const PART_B_FTOT   =25;  // force-accumulator for color-change: blu
 */
 const PART_MAXVAR   =18;  // Size of array in CPart uses to store its values.
 
-
 // Array-Name consts that select PartSys objects' numerical-integration solver:
 //------------------------------------------------------------------------------
 // EXPLICIT methods: GOOD!
@@ -145,20 +144,18 @@ function PartSys() {
     this.randX = 0;   // random point chosen by call to roundRand()
     this.randY = 0;
     this.randZ = 0;
-    this.isFountain = 0;  // Press 'f' or 'F' key to toggle; if 1, apply age 
-                        // age constraint, which re-initializes particles whose
-                        // lifetime falls to zero, forming a 'fountain' of
-                        // freshly re-initialized bouncy-balls.
-    this.forceList = [];            // (empty) array to hold CForcer objects
-                                    // for use by ApplyAllForces().
-                                    // NOTE: this.forceList.push("hello"); appends
-                                    // string "Hello" as last element of forceList.
-                                    // console.log(this.forceList[0]); prints hello.
-    this.limitList = [];            // (empty) array to hold CLimit objects
-                                    // for use by doContstraints()
-    this.particleSystems = [];
+    this.current_particle_System = 0;   // Press 'f' or 'F' key to cycle through different
+                                        // particle systems
+    this.forceList = [];                // (empty) array to hold CForcer objects
+                                        // for use by ApplyAllForces().
+                                        // NOTE: this.forceList.push("hello"); appends
+                                        // string "Hello" as last element of forceList.
+                                        // console.log(this.forceList[0]); prints hello.
+    this.limitList = [];                // (empty) array to hold CLimit objects
+                                        // for use by doContstraints()
+    this.particleSystemType = false;          // thisParticleSystemType   
 
-    
+    this.total_particle_systems = 0;
 }
 // HELPER FUNCTIONS:
 //=====================
@@ -399,11 +396,8 @@ PartSys.prototype.initBouncy3D = function(count, shader) {
                                   // the forceList array of force-causing objects.
 
     //Set the current Particle System and push it
-    var pTmp = new PartSysType();
 
-    pTmp.PartSysType = BOUNCY_BALL;
-
-    this.particleSystems.push(pTmp);
+    this.particleSystemType = BOUNCY_BALL;
 
   // Report:
   console.log("PartSys.initBouncy3D() created PartSys.forceList[] array of ");
@@ -420,9 +414,9 @@ PartSys.prototype.initBouncy3D = function(count, shader) {
                                   // rectangular volume that
   cTmp.targFirst = 0;             // applies to ALL particles; starting at 0 
   cTmp.partCount = -1;            // through all the rest of them.
-  cTmp.xMin = -1.0; cTmp.xMax = 1.0;  // box extent:  +/- 1.0 box at origin
-  cTmp.yMin = -1.0; cTmp.yMax = 1.0;
-  cTmp.zMin = -1.0; cTmp.zMax = 1.0;
+    cTmp.xMin = -0.95; cTmp.xMax = 0.95;  // box extent:  +/- 1.0 box at origin
+    cTmp.yMin = -0.95; cTmp.yMax = 0.95;
+    cTmp.zMin = -0.95; cTmp.zMax = 0.95;
   cTmp.Kresti = 1.0;              // bouncyness: coeff. of restitution.
                                   // (and IGNORE all other CLimit members...)
   this.limitList.push(cTmp);      // append this 'box' constraint object to the
@@ -489,7 +483,10 @@ PartSys.prototype.initBouncy3D = function(count, shader) {
     this.s1[j + PART_ZVEL] =  this.INIT_VEL*(0.4 + 0.2*this.randZ);
       this.s1[j + PART_MASS] = 1.0;      // mass, in kg.
       this.s1[j + PART_DIAM] = this.size; // on-screen diameter, in pixels
-    this.s1[j + PART_RENDMODE] = 0.0;
+      this.s1[j + PART_RENDMODE] = 0.0;
+      this.s1[j + PART_R] = 0.2;
+      this.s1[j + PART_G] = 1.0;
+      this.s1[j + PART_B] = 0.4;
     this.s1[j + PART_AGE] = 30 + 100*Math.random();
     var distance = this.calculateDistance(this.s1[j + PART_XPOS], this.s1[j + PART_YPOS], this.s1[j + PART_ZPOS])
     var size = this.size / distance;  
@@ -547,9 +544,18 @@ PartSys.prototype.initBouncy3D = function(count, shader) {
     return -1;
   }
     
-  gl.vertexAttribPointer(this.a_SizeID, 1, gl.FLOAT, false, PART_MAXVAR * this.FSIZE, PART_DIAM * this.FSIZE);
+    gl.vertexAttribPointer(this.a_SizeID, 1, gl.FLOAT, false, PART_MAXVAR * this.FSIZE, PART_DIAM * this.FSIZE);
 
-  gl.enableVertexAttribArray(this.a_SizeID);
+    gl.enableVertexAttribArray(this.a_SizeID);
+
+    this.a_ColorID = gl.getAttribLocation(gl.program, 'a_Color');
+    if (this.a_ColorID < 0) {
+        console.log('PartSys.init() Failed to get the storage location of a_Color');
+    }
+
+    gl.vertexAttribPointer(this.a_ColorID, 3, gl.FLOAT, false, PART_MAXVAR * this.FSIZE, PART_R * this.FSIZE);
+
+    gl.enableVertexAttribArray(this.a_ColorID);
 
   // ---------Set up all uniforms we send to the GPU:
   // Get graphics system storage location of each uniform our shaders use:
@@ -602,9 +608,7 @@ PartSys.prototype.initFireReeves = function(count, shader) {
     this.forceList.push(fTmp);      // append this 'gravity' force object to 
     // the forceList array of force-causing objects.
 
-    var pTmp = new PartSysType();
-    pTmp.PartSysType = FIRE;
-    this.particleSystems.push(pTmp);
+    this.particleSystemType = FIRE;
 
     // Report:
     console.log("PartSys.initBouncy3D() created PartSys.forceList[] array of ");
@@ -757,6 +761,16 @@ PartSys.prototype.initFireReeves = function(count, shader) {
 
     gl.enableVertexAttribArray(this.a_SizeID);
 
+
+    this.a_ColorID = gl.getAttribLocation(gl.program, 'a_Color');
+    if (this.a_ColorID < 0) {
+        console.log('PartSys.init() Failed to get the storage location of a_Color');
+    }
+
+    gl.vertexAttribPointer(this.a_ColorID, 3, gl.FLOAT, false, PART_MAXVAR * this.FSIZE, PART_R * this.FSIZE);
+
+    gl.enableVertexAttribArray(this.a_ColorID);
+    
     // ---------Set up all uniforms we send to the GPU:
     // Get graphics system storage location of each uniform our shaders use:
     // (why? see  http://www.opengl.org/wiki/Uniform_(GLSL) )
@@ -771,18 +785,11 @@ PartSys.prototype.initFireReeves = function(count, shader) {
         console.log('PartSys.init() Failed to get u_ModelMat variable location');
     }
 
-    this.uLoc_Color = gl.getUniformLocation(gl.program, 'u_Color');
-    if (!this.uLoc_Color) {
-        console.log('PartSys.init() Failed to get u_Color variable location');
-    }
-
-    this.particleColor = new Vector4([this.s2[PART_R], this.s2[PART_G], this.s2[PART_B], 1.0]);
 
     // Set the initial values of all uniforms on GPU: (runMode set by keyboard)
     gl.uniform1i(this.u_runModeID, this.runMode);
     gl.uniformMatrix4fv(this.uLoc_ModelMatrix, false, this.ModelMatrix.elements);
     gl.uniform1f(this.uLoc_size, this.size);
-    gl.uniform4fv(this.uLoc_Color, this.particleColor.elements);
 }
 
 PartSys.prototype.initTornado = function(count) { 
@@ -968,8 +975,8 @@ PartSys.prototype.render = function(s) {
                     // we begin data replacement.
           this.s1); // Float32Array data source.
 
-	gl.uniform1i(this.u_runModeID, this.runMode);	// run/step/pause the particle system 
-
+    gl.uniform1i(this.u_runModeID, this.runMode);	// run/step/pause the particle system 
+    gl.uniform4fv(this.uLoc_Color, this.particleColor.elements);
   // Draw our VBO's new contents:
   gl.drawArrays(gl.POINTS,          // mode: WebGL drawing primitive to use 
                 0,                  // index: start at this vertex in the VBO;
@@ -977,14 +984,17 @@ PartSys.prototype.render = function(s) {
 }
 
 PartSys.prototype.switchToMe = function() {
-  gl.useProgram(this.shader);
-  gl.bindBuffer(gl.ARRAY_BUFFER, this.vboID);
+    gl.useProgram(this.shader);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vboID);
 
-  gl.vertexAttribPointer(this.a_PositionID, 4, gl.FLOAT, false, PART_MAXVAR*this.FSIZE, PART_XPOS * this.FSIZE);
-  gl.enableVertexAttribArray(this.a_PositionID);
-
+    gl.vertexAttribPointer(this.a_PositionID, 4, gl.FLOAT, false, PART_MAXVAR * this.FSIZE, PART_XPOS * this.FSIZE);
+    gl.enableVertexAttribArray(this.a_PositionID);
+    
     gl.vertexAttribPointer(this.a_SizeID, 1, gl.FLOAT, false, PART_MAXVAR * this.FSIZE, PART_DIAM * this.FSIZE);
-  gl.enableVertexAttribArray(this.a_SizeID);
+    gl.enableVertexAttribArray(this.a_SizeID);
+
+    gl.vertexAttribPointer(this.a_ColorID, 3, gl.FLOAT, false, PART_MAXVAR * this.FSIZE, PART_R * this.FSIZE);
+    gl.enableVertexAttribArray(this.a_ColorID);
 }
 
 PartSys.prototype.isReady = function() {
@@ -1010,28 +1020,25 @@ PartSys.prototype.render3D = function(s) {
   this.ModelMatrix.lookAt(x_Coordinate, y_Coordinate, z_Coordinate,
                               x_lookAt,     y_lookAt,     z_lookAt,
                                      0,            0,            1,);
-  var j = 0;
   
-  for(var i = 0; i < this.partCount; i+=1, j += PART_MAXVAR) {
+    for (var i = 0, j = 0; i < this.partCount; i+=1, j += PART_MAXVAR) {
       var distance = this.calculateDistance(this.s2[j + PART_XPOS], this.s2[j + PART_YPOS], this.s2[j + PART_ZPOS])
       var size = this.s2[j + PART_SIZE] * 10 / distance;   
       this.s2[j + PART_DIAM] = size;
-  } 
+      //this.particleColor = new Vector4([this.s2[j + PART_R], this.s2[j + PART_G], this.s2[j + PART_B], 1.0]);
+   } 
 
-    this.particleColor = new Vector4([this.s2[PART_R], this.s2[PART_G], this.s2[PART_B], 1.0]);
 
   this.ModelMatrix.translate(0, 0, 1);
   this.ModelMatrix.rotate(90, 1, 0, 0);
 
   pushMatrix(this.ModelMatrix);
 
-  this.ModelMatrix = popMatrix();
+    this.ModelMatrix = popMatrix();
 
 
-
-  gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.s2);
+  gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.s1);
     gl.uniformMatrix4fv(this.uLoc_ModelMatrix, false, this.ModelMatrix.elements);
-    gl.uniform4fv(this.uLoc_Color, this.particleColor.elements);
   gl.uniform1i(this.u_runModeID, this.runMode);
   gl.drawArrays(gl.POINTS, 0, this.partCount);
 }
@@ -1327,47 +1334,56 @@ PartSys.prototype.doConstraints = function(sNow, sNext, cList) {
         break;
     } // switch(cList[k].limitType) ebd
   } // for(k=0...) end
+}
 
-//-----------------------------add 'age' constraint:
-    if (this.isFountain == 1)    // When particle age falls to zero, re-initialize
-        // to re-launch from a randomized location with
-        // a randomized velocity and randomized age.
+PartSys.prototype.particleBehaviour = function () {
 
-  var j = 0;  // i==particle number; j==array index for i-th particle
-  for(var i = 0; i < this.partCount; i += 1, j+= PART_MAXVAR) {
-      this.s2[j + PART_AGE] -= 1;     // decrement lifetime.
-      this.s2[j + PART_SIZE] *= 0.99;
-      this.s2[j + PART_R] *= 0.99;
-      this.s2[j + PART_G] *= 0.99;
-      this.s2[j + PART_B] *= 0.99;
+    switch (this.particleSystemType) {
+        case BOUNCY_BALL:
+            console.log("Currently No Special Behaviour");
+            break;
+        case FIRE:
+              // i==particle number; j==array index for i-th particle
+            for (var i = 0, j = 0; i < this.partCount; i += 1, j += PART_MAXVAR) {
+                var inv_age = 1 / this.s2[j + PART_AGE];
+                this.s2[j + PART_AGE] -= 1;     // decrement lifetime.
+                this.s2[j + PART_SIZE] *= this.s2[j + PART_AGE] * inv_age;
+                this.s2[j + PART_R] *= this.clamp(0, 1, this.s2[j + PART_AGE] * inv_age);
+                this.s2[j + PART_G] *= this.clamp(0, 1, this.s2[j + PART_AGE] * inv_age);
 
-      this.s2[j + PART_XVEL] = this.randX * 0.2;
-      this.s2[j + PART_YVEL] = 0.7;
-      this.s2[j + PART_ZVEL] = this.randZ * 0.2;
+                this.s2[j + PART_XVEL] = this.randX * 0.2;
+                this.s2[j + PART_YVEL] = 0.7;
+                this.s2[j + PART_ZVEL] = this.randZ * 0.2;
 
-    if(this.s2[j + PART_AGE] <= 0) { // End of life: RESET this particle!
-      this.roundRand();       // set this.randX,randY,randZ to random location in 
-                              // a 3D unit sphere centered at the origin.
-      //all our bouncy-balls stay within a +/- 0.9 cube centered at origin; 
-      // set random positions in a 0.1-radius ball centered at (-0.8,-0.8,-0.8)
-        this.s2[j + PART_XPOS] = -0.0 + 0.2*this.randX; 
-        this.s2[j + PART_YPOS] = -0.6 + 0.2*this.randY;  
-        this.s2[j + PART_ZPOS] = -0.0 + 0.2*this.randZ;
-        this.s2[j + PART_WPOS] =  1.0;      // position 'w' coordinate;
-        this.roundRand(); // Now choose random initial velocities too:
-        this.s2[j + PART_XVEL] =  this.INIT_VEL*(0.0 + 0.2*this.randX) * 0.5;
-        this.s2[j + PART_YVEL] =  this.INIT_VEL*(0.5 + 0.2*this.randY) * 0.6;
-        this.s2[j + PART_ZVEL] =  this.INIT_VEL*(0.0 + 0.2*this.randZ) * 0.5;
-        this.s2[j + PART_MASS] =  0.2;      // mass, in kg.
-        this.s2[j + PART_DIAM] =  this.size; // on-screen diameter, in pixels
-        this.s2[j + PART_RENDMODE] = 0.0;
-        this.s2[j + PART_R] = 1.0;
-        this.s2[j + PART_G] = 0.5;
-        this.s2[j + PART_B] = 0.0;
-        this.s2[j + PART_AGE] = 30 + 100 * Math.random();
-        this.s2[j + PART_SIZE] = 10;
-      } // if age <=0
-  } // for loop thru all particles
+                if (this.s2[j + PART_AGE] <= 0) { // End of life: RESET this particle!
+                    this.roundRand();       // set this.randX,randY,randZ to random location in 
+                    // a 3D unit sphere centered at the origin.
+                    // all our bouncy-balls stay within a +/- 0.9 cube centered at origin; 
+                    // set random positions in a 0.1-radius ball centered at (-0.8,-0.8,-0.8)
+                    this.s2[j + PART_XPOS] = -0.0 + 0.2 * this.randX;
+                    this.s2[j + PART_YPOS] = -0.6 + 0.2 * this.randY;
+                    this.s2[j + PART_ZPOS] = -0.0 + 0.2 * this.randZ;
+                    this.s2[j + PART_WPOS] = 1.0;      // position 'w' coordinate;
+                    this.roundRand(); // Now choose random initial velocities too:
+                    this.s2[j + PART_XVEL] = this.INIT_VEL * (0.0 + 0.2 * this.randX) * 0.5;
+                    this.s2[j + PART_YVEL] = this.INIT_VEL * (0.5 + 0.2 * this.randY) * 0.6;
+                    this.s2[j + PART_ZVEL] = this.INIT_VEL * (0.0 + 0.2 * this.randZ) * 0.5;
+                    this.s2[j + PART_MASS] = 0.2;      // mass, in kg.
+                    this.s2[j + PART_DIAM] = this.size; // on-screen diameter, in pixels
+                    this.s2[j + PART_RENDMODE] = 0.0;
+                    this.s2[j + PART_R] = 0.5 + Math.random() * 0.5;
+                    this.s2[j + PART_G] = 0.1 + Math.random() * 0.2;
+                    this.s2[j + PART_B] = 0.1;
+                    this.s2[j + PART_AGE] = 30 + 100 * Math.random();
+                    this.s2[j + PART_SIZE] = 10;
+                } // if age <=0
+            } // for loop thru all particles
+            break;
+        default:
+            console.log("Invalid Input");
+
+    }
+
 }
 
 PartSys.prototype.swap = function() {
@@ -1397,9 +1413,13 @@ PartSys.prototype.swap = function() {
 // REPLACE s1 contents with s2 contents:
 }
 
+PartSys.prototype.clamp = function (min, max, number) {
+    return Math.min(Math.max(number, min), max);
+};
+
 PartSys.prototype.printPosition = function(s) {
   var j = 0;  // i==particle number; j==array index for i-th particle
-  for(var i = 0; i < this.partCount; i += 1, j+= PART_MAXVAR) {
+  for(var i = 0; i < 2; i += 1, j+= PART_MAXVAR) {
     console.log("Point" + i);
     console.log("X Position = " + s[j + PART_XPOS]);
     console.log("Y Position = " + s[j + PART_YPOS]);
@@ -1410,6 +1430,8 @@ PartSys.prototype.printPosition = function(s) {
     console.log("Z Velocity = " + s[j + PART_ZVEL]);
       console.log("----------------------------------------");
       console.log("Size = " + s[j + PART_SIZE]);
-
-  }
+      console.log("PART_R" + s[j + PART_R]);
+      console.log("PART_G" + s[j + PART_G]);
+      console.log("PART_B" + s[j + PART_B]);
+  } 
 }

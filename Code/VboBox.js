@@ -387,8 +387,8 @@ this.VSHADER_SOURCE_PARTICLE =
   ' uniform    int u_runMode;                \n' + // particle system state: 
   ' attribute float a_Size;                  \n' +
   ' attribute vec4 a_Position;               \n' +
+  ' attribute vec3 a_Color;                  \n' +
   ' uniform   mat4 u_ModelMat;               \n' +
-  ' uniform   vec4 u_Color;                  \n' +
   ' varying   vec4 v_Color;                  \n' +
   ' void main() {                            \n' +
   '   gl_PointSize = a_Size;                 \n' +// TRY MAKING THIS LARGER...
@@ -403,7 +403,7 @@ this.VSHADER_SOURCE_PARTICLE =
   '     v_Color = vec4(1.0, 1.0, 1.0, 1.0);  \n' +  // white: 2==step
   '     }                                    \n' +
   '   else {                                 \n' +
-  '     v_Color = vec4(0.2, 1.0, 0.2, 1.0);  \n' +  // green: >=3 ==run
+  '     v_Color = vec4(a_Color, 1.0);        \n' +  // green: >=3 ==run
   '     }                                    \n' +
   ' }                                        \n' ;
 
@@ -434,14 +434,15 @@ particle3D.prototype.init = function(count) {
 particle3D.prototype.draw = function() {
   // check: was WebGL context set to use our VBO & shader program?
 
-  this.g_partA.switchToMe()
-  this.g_partA.isReady();
-  this.g_partA.applyForces(this.g_partA.s1, this.g_partA.forceList);
-  this.g_partA.dotFinder(this.g_partA.s1dot, this.g_partA.s1);
-  this.g_partA.solver();
-  this.g_partA.doConstraints();
-  this.g_partA.render3D();
-  this.g_partA.swap();
+    this.g_partA.switchToMe()
+    this.g_partA.isReady();
+    this.g_partA.applyForces(this.g_partA.s1, this.g_partA.forceList);
+    this.g_partA.dotFinder(this.g_partA.s1dot, this.g_partA.s1);
+    this.g_partA.solver();
+    this.g_partA.doConstraints(this.g_partA.s1, this.g_partA.s2, this.g_partA.limitList);
+    this.g_partA.particleBehaviour();
+    this.g_partA.render3D();
+    this.g_partA.swap();
 }
 
 particle3D.prototype.render = function() {
@@ -465,8 +466,8 @@ function particleFire() {
         ' uniform    int u_runMode;                \n' + // particle system state: 
         ' attribute float a_Size;                  \n' +
         ' attribute vec4 a_Position;               \n' +
+        ' attribute vec3 a_Color;                  \n' +
         ' uniform   mat4 u_ModelMat;               \n' +
-        ' uniform   vec4 u_Color;                  \n' +
         ' varying   vec4 v_Color;                  \n' +
         ' void main() {                            \n' +
         '   gl_PointSize = a_Size;                 \n' +// TRY MAKING THIS LARGER...
@@ -481,7 +482,7 @@ function particleFire() {
         '     v_Color = vec4(1.0, 1.0, 1.0, 1.0);  \n' +  // white: 2==step
         '     }                                    \n' +
         '   else {                                 \n' +
-        '     v_Color = u_Color;  \n' +  // green: >=3 ==run
+        '     v_Color = vec4(a_Color, 1.0);        \n' +  // green: >=3 ==run
         '     }                                    \n' +
         ' }                                        \n';
 
@@ -518,6 +519,7 @@ particleFire.prototype.draw = function () {
     this.g_partA.dotFinder(this.g_partA.s1dot, this.g_partA.s1);
     this.g_partA.solver();
     this.g_partA.doConstraints(this.g_partA.s1, this.g_partA.s2, this.g_partA.limitList);
+    this.g_partA.particleBehaviour();
     this.g_partA.render3D();
     this.g_partA.swap();
 }
