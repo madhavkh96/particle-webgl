@@ -105,11 +105,16 @@ var eyePosVector = new Vector3([x_Coordinate, y_Coordinate, z_Coordinate]);
 var all_Particle_systems = [];
 var current_part_sys = 0;
 groundPlane = new groundVBO();
+cube = new drawCube();
+
 particleSys3D = new particle3D();
 all_Particle_systems.push(particleSys3D);
+
 particleSysFire = new particleFire();
 all_Particle_systems.push(particleSysFire);
-cube = new drawCube();
+
+particleSysSpringPair = new particleSpringPair();
+all_Particle_systems.push(particleSysSpringPair);
 
 function main() {
 //==============================================================================
@@ -180,6 +185,7 @@ function main() {
     cube.init();
     particleSys3D.init(200);
     particleSysFire.init(2000);
+    particleSysSpringPair.init();
 
    vpAspect = g_canvas.width /     // On-screen aspect ratio for
              g_canvas.height ;  // this camera: width/height.
@@ -293,6 +299,9 @@ function drawAll() {
             case FIRE:
                 particleSysFire.draw();
                 break;
+            case SPRING_PAIR:
+                particleSysSpringPair.draw();
+                break;
             default:
                 console.log("Invalid Particle System");
         }
@@ -313,6 +322,9 @@ function drawAll() {
                 break;
             case FIRE:
                 particleSysFire.render();
+                break;
+            case SPRING_PAIR:
+                particleSysSpringPair.render();
                 break;
             default:
                 console.log("Invalid Particle System");

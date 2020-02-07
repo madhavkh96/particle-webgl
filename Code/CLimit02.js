@@ -155,6 +155,12 @@ function CLimit() {
                                   // axes to 'pose' axes where we define 'wall'
                                   // and other non-axis-aligned constraints.
   this.radius = 1.0;        // hard/solid particle size imposed by by LIM_RADIUS
+
+    //Special Variable for anchor point
+
+    this.anchorPoint = -1;
+    this.anchorPosition = new Vector4([0, 0, 0, 1]);
+
 }
 
 CLimit.prototype.printMe = function(opt_src) {

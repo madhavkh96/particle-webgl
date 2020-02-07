@@ -311,230 +311,8 @@ groundVBO.prototype.reload = function() {
 
 }
 
-//=============================================================================
-//=============================================================================
-function particle2D() {
-//=============================================================================
-//=============================================================================
-  
-this.VSHADER_SOURCE_PARTICLE =
-  ' precision mediump float;                 \n' + // req'd in OpenGL ES if we use 'float'
-  ' uniform   int u_runMode;                 \n' + // particle system state: 
-  ' attribute vec4 a_Position;               \n' +
-  ' varying   vec4 v_Color;                  \n' +
-  ' void main() {                            \n' +
-  '   gl_PointSize = 20.0;                   \n' +// TRY MAKING THIS LARGER...
-  '   gl_Position = a_Position; \n' +  
-  '   if(u_runMode == 0) {                   \n' +
-  '     v_Color = vec4(1.0, 0.0, 0.0, 1.0);  \n' +   // red: 0==reset
-  '     }                                    \n' +
-  '   else if(u_runMode == 1) {              \n' +
-  '     v_Color = vec4(1.0, 1.0, 0.0, 1.0);  \n' +  // yellow: 1==pause
-  '     }                                    \n' +
-  '   else if(u_runMode == 2) {              \n' +    
-  '     v_Color = vec4(1.0, 1.0, 1.0, 1.0);  \n' +  // white: 2==step
-  '     }                                    \n' +
-  '   else {                                 \n' +
-  '     v_Color = vec4(0.2, 1.0, 0.2, 1.0);  \n' +  // green: >=3 ==run
-  '     }                                    \n' +
-  ' }                                        \n' ;
-
-this.FSHADER_SOURCE_PARTICLE =
-  'precision mediump float;                                 \n' +
-  'varying vec4 v_Color;                                    \n' +
-  'void main() {                                            \n' +
-  '  float dist = distance(gl_PointCoord, vec2(0.5, 0.5));  \n' +
-  '  if(dist < 0.5) {                                       \n' + 
-  '   gl_FragColor = vec4((1.0-2.0*dist)*v_Color.rgb, 1.0); \n' +
-  '  } else { discard; }                                    \n' +
-  '}                                                        \n' ;                           
-
-this.g_partA = new PartSys();
-};
-
-particle2D.prototype.init = function(count) { 
-
-  this.shaderLoc = createProgram(gl, this.VSHADER_SOURCE_PARTICLE, this.FSHADER_SOURCE_PARTICLE);
-  if (!this.shaderLoc) {
-    console.log(this.constructor.name + 
-                '.init() failed to create executable Shaders on the GPU. Bye!');
-    return;
-  }
-  this.g_partA.initBouncy2D(count, this.shaderLoc);
-}
-
-particle2D.prototype.draw = function() {
-  this.g_partA.applyForces(this.g_partA.s1, this.g_partA.forceList);
-  this.g_partA.dotFinder(this.g_partA.s1dot, this.g_partA.s1);
-  this.g_partA.solver();
-  this.g_partA.doConstraints();
-  this.g_partA.render();
-  this.g_partA.swap();
-}
-
-particle2D.prototype.render = function() {
-  this.g_partA.render();
-}
-
-//=============================================================================
-//=============================================================================
-function particle3D() {
-//=============================================================================
-//=============================================================================
-  
-this.VSHADER_SOURCE_PARTICLE =
-  ' precision mediump float;                 \n' + // req'd in OpenGL ES if we use 'float'
-  ' uniform    int u_runMode;                \n' + // particle system state: 
-  ' attribute float a_Size;                  \n' +
-  ' attribute vec4 a_Position;               \n' +
-  ' attribute vec3 a_Color;                  \n' +
-  ' uniform   mat4 u_ModelMat;               \n' +
-  ' varying   vec4 v_Color;                  \n' +
-  ' void main() {                            \n' +
-  '   gl_PointSize = a_Size;                 \n' +// TRY MAKING THIS LARGER...
-  '   gl_Position = u_ModelMat * a_Position; \n' +  
-  '   if(u_runMode == 0) {                   \n' +
-  '     v_Color = vec4(1.0, 0.0, 0.0, 1.0);  \n' +   // red: 0==reset
-  '     }                                    \n' +
-  '   else if(u_runMode == 1) {              \n' +
-  '     v_Color = vec4(1.0, 1.0, 0.0, 1.0);  \n' +  // yellow: 1==pause
-  '     }                                    \n' +
-  '   else if(u_runMode == 2) {              \n' +    
-  '     v_Color = vec4(1.0, 1.0, 1.0, 1.0);  \n' +  // white: 2==step
-  '     }                                    \n' +
-  '   else {                                 \n' +
-  '     v_Color = vec4(a_Color, 1.0);        \n' +  // green: >=3 ==run
-  '     }                                    \n' +
-  ' }                                        \n' ;
-
-this.FSHADER_SOURCE_PARTICLE =
-  'precision mediump float;                                 \n' +
-  'varying vec4 v_Color;                                    \n' +
-  'void main() {                                            \n' +
-  '  float dist = distance(gl_PointCoord, vec2(0.5, 0.5));  \n' +
-  '  if(dist < 0.5) {                                       \n' + 
-  '   gl_FragColor = vec4((1.0-2.0*dist)*v_Color.rgb, 1.0); \n' +
-  '  } else { discard; }                                    \n' +
-  '}                                                        \n' ;                           
-
-this.g_partA = new PartSys();
-};
-
-particle3D.prototype.init = function(count) { 
-
-  this.shaderLoc = createProgram(gl, this.VSHADER_SOURCE_PARTICLE, this.FSHADER_SOURCE_PARTICLE);
-  if (!this.shaderLoc) {
-    console.log(this.constructor.name + 
-                '.init() failed to create executable Shaders on the GPU. Bye!');
-    return;
-  }
-  this.g_partA.initBouncy3D(count, this.shaderLoc);
-}
-
-particle3D.prototype.draw = function() {
-  // check: was WebGL context set to use our VBO & shader program?
-
-    this.g_partA.switchToMe()
-    this.g_partA.isReady();
-    this.g_partA.applyForces(this.g_partA.s1, this.g_partA.forceList);
-    this.g_partA.dotFinder(this.g_partA.s1dot, this.g_partA.s1);
-    this.g_partA.solver();
-    this.g_partA.doConstraints(this.g_partA.s1, this.g_partA.s2, this.g_partA.limitList);
-    this.g_partA.particleBehaviour();
-    this.g_partA.render3D();
-    this.g_partA.swap();
-}
-
-particle3D.prototype.render = function() {
-
-  this.g_partA.switchToMe();
-  this.g_partA.isReady();
-  this.g_partA.render3D();
-}
-
-particle3D.prototype.debug = function () {
-    this.g_partA.printPosition(this.g_partA.s1);
-}
-
-
-function particleFire() {
-    //=============================================================================
-    //=============================================================================
-
-    this.VSHADER_SOURCE_PARTICLE =
-        ' precision mediump float;                 \n' + // req'd in OpenGL ES if we use 'float'
-        ' uniform    int u_runMode;                \n' + // particle system state: 
-        ' attribute float a_Size;                  \n' +
-        ' attribute vec4 a_Position;               \n' +
-        ' attribute vec3 a_Color;                  \n' +
-        ' uniform   mat4 u_ModelMat;               \n' +
-        ' varying   vec4 v_Color;                  \n' +
-        ' void main() {                            \n' +
-        '   gl_PointSize = a_Size;                 \n' +// TRY MAKING THIS LARGER...
-        '   gl_Position = u_ModelMat * a_Position; \n' +
-        '   if(u_runMode == 0) {                   \n' +
-        '     v_Color = vec4(1.0, 0.0, 0.0, 1.0);  \n' +   // red: 0==reset
-        '     }                                    \n' +
-        '   else if(u_runMode == 1) {              \n' +
-        '     v_Color = vec4(1.0, 1.0, 0.0, 1.0);  \n' +  // yellow: 1==pause
-        '     }                                    \n' +
-        '   else if(u_runMode == 2) {              \n' +
-        '     v_Color = vec4(1.0, 1.0, 1.0, 1.0);  \n' +  // white: 2==step
-        '     }                                    \n' +
-        '   else {                                 \n' +
-        '     v_Color = vec4(a_Color, 1.0);        \n' +  // green: >=3 ==run
-        '     }                                    \n' +
-        ' }                                        \n';
-
-    this.FSHADER_SOURCE_PARTICLE =
-        'precision mediump float;                                 \n' +
-        'varying vec4 v_Color;                                    \n' +
-        'void main() {                                            \n' +
-        '  float dist = distance(gl_PointCoord, vec2(0.5, 0.5));  \n' +
-        '  if(dist < 0.5) {                                       \n' +
-        '   gl_FragColor = vec4((1.0-2.0*dist)*v_Color.rgb, 1.0); \n' +
-        '  } else { discard; }                                    \n' +
-        '}                                                        \n';
-
-    this.g_partA = new PartSys();
-};
-
-particleFire.prototype.init = function (count) {
-
-    this.shaderLoc = createProgram(gl, this.VSHADER_SOURCE_PARTICLE, this.FSHADER_SOURCE_PARTICLE);
-    if (!this.shaderLoc) {
-        console.log(this.constructor.name +
-            '.init() failed to create executable Shaders on the GPU. Bye!');
-        return;
-    }
-    this.g_partA.initFireReeves(count, this.shaderLoc);
-}
-
-particleFire.prototype.draw = function () {
-    // check: was WebGL context set to use our VBO & shader program?
-
-    this.g_partA.switchToMe()
-    this.g_partA.isReady();
-    this.g_partA.applyForces(this.g_partA.s1, this.g_partA.forceList);
-    this.g_partA.dotFinder(this.g_partA.s1dot, this.g_partA.s1);
-    this.g_partA.solver();
-    this.g_partA.doConstraints(this.g_partA.s1, this.g_partA.s2, this.g_partA.limitList);
-    this.g_partA.particleBehaviour();
-    this.g_partA.render3D();
-    this.g_partA.swap();
-}
-
-particleFire.prototype.render = function () {
-
-    this.g_partA.switchToMe();
-    this.g_partA.isReady();
-    this.g_partA.render3D();
-}
-
-particleFire.prototype.debug = function () {
-    this.g_partA.printPosition(this.g_partA.s1);
-}
-
+//==============================================================================
+//==============================================================================
 
 function drawCube() {
     //=============================================================================
@@ -748,4 +526,312 @@ drawCube.prototype.reload = function () {
         // begins in the VBO.
         this.vboContents);   // the JS source-data array used to fill VBO
 
+}
+
+
+//=============================================================================
+//=============================================================================
+function particle2D() {
+//=============================================================================
+//=============================================================================
+  
+this.VSHADER_SOURCE_PARTICLE =
+  ' precision mediump float;                 \n' + // req'd in OpenGL ES if we use 'float'
+  ' uniform   int u_runMode;                 \n' + // particle system state: 
+  ' attribute vec4 a_Position;               \n' +
+  ' varying   vec4 v_Color;                  \n' +
+  ' void main() {                            \n' +
+  '   gl_PointSize = 20.0;                   \n' +// TRY MAKING THIS LARGER...
+  '   gl_Position = a_Position; \n' +  
+  '   if(u_runMode == 0) {                   \n' +
+  '     v_Color = vec4(1.0, 0.0, 0.0, 1.0);  \n' +   // red: 0==reset
+  '     }                                    \n' +
+  '   else if(u_runMode == 1) {              \n' +
+  '     v_Color = vec4(1.0, 1.0, 0.0, 1.0);  \n' +  // yellow: 1==pause
+  '     }                                    \n' +
+  '   else if(u_runMode == 2) {              \n' +    
+  '     v_Color = vec4(1.0, 1.0, 1.0, 1.0);  \n' +  // white: 2==step
+  '     }                                    \n' +
+  '   else {                                 \n' +
+  '     v_Color = vec4(0.2, 1.0, 0.2, 1.0);  \n' +  // green: >=3 ==run
+  '     }                                    \n' +
+  ' }                                        \n' ;
+
+this.FSHADER_SOURCE_PARTICLE =
+  'precision mediump float;                                 \n' +
+  'varying vec4 v_Color;                                    \n' +
+  'void main() {                                            \n' +
+  '  float dist = distance(gl_PointCoord, vec2(0.5, 0.5));  \n' +
+  '  if(dist < 0.5) {                                       \n' + 
+  '   gl_FragColor = vec4((1.0-2.0*dist)*v_Color.rgb, 1.0); \n' +
+  '  } else { discard; }                                    \n' +
+  '}                                                        \n' ;                           
+
+this.g_partA = new PartSys();
+};
+
+particle2D.prototype.init = function(count) { 
+
+  this.shaderLoc = createProgram(gl, this.VSHADER_SOURCE_PARTICLE, this.FSHADER_SOURCE_PARTICLE);
+  if (!this.shaderLoc) {
+    console.log(this.constructor.name + 
+                '.init() failed to create executable Shaders on the GPU. Bye!');
+    return;
+  }
+  this.g_partA.initBouncy2D(count, this.shaderLoc);
+}
+
+particle2D.prototype.draw = function() {
+  this.g_partA.applyForces(this.g_partA.s1, this.g_partA.forceList);
+  this.g_partA.dotFinder(this.g_partA.s1dot, this.g_partA.s1);
+  this.g_partA.solver();
+  this.g_partA.doConstraints();
+  this.g_partA.render();
+  this.g_partA.swap();
+}
+
+particle2D.prototype.render = function() {
+  this.g_partA.render();
+}
+
+//=============================================================================
+//=============================================================================
+function particle3D() {
+//=============================================================================
+//=============================================================================
+  
+this.VSHADER_SOURCE_PARTICLE =
+  ' precision mediump float;                 \n' + // req'd in OpenGL ES if we use 'float'
+  ' uniform    int u_runMode;                \n' + // particle system state: 
+  ' attribute float a_Size;                  \n' +
+  ' attribute vec4 a_Position;               \n' +
+  ' attribute vec3 a_Color;                  \n' +
+  ' uniform   mat4 u_ModelMat;               \n' +
+  ' varying   vec4 v_Color;                  \n' +
+  ' void main() {                            \n' +
+  '   gl_PointSize = a_Size;                 \n' +// TRY MAKING THIS LARGER...
+  '   gl_Position = u_ModelMat * a_Position; \n' +  
+  '   if(u_runMode == 0) {                   \n' +
+  '     v_Color = vec4(1.0, 0.0, 0.0, 1.0);  \n' +   // red: 0==reset
+  '     }                                    \n' +
+  '   else if(u_runMode == 1) {              \n' +
+  '     v_Color = vec4(1.0, 1.0, 0.0, 1.0);  \n' +  // yellow: 1==pause
+  '     }                                    \n' +
+  '   else if(u_runMode == 2) {              \n' +    
+  '     v_Color = vec4(1.0, 1.0, 1.0, 1.0);  \n' +  // white: 2==step
+  '     }                                    \n' +
+  '   else {                                 \n' +
+  '     v_Color = vec4(a_Color, 1.0);        \n' +  // green: >=3 ==run
+  '     }                                    \n' +
+  ' }                                        \n' ;
+
+this.FSHADER_SOURCE_PARTICLE =
+  'precision mediump float;                                 \n' +
+  'varying vec4 v_Color;                                    \n' +
+  'void main() {                                            \n' +
+  '  float dist = distance(gl_PointCoord, vec2(0.5, 0.5));  \n' +
+  '  if(dist < 0.5) {                                       \n' + 
+  '   gl_FragColor = vec4((1.0-2.0*dist)*v_Color.rgb, 1.0); \n' +
+  '  } else { discard; }                                    \n' +
+  '}                                                        \n' ;                           
+
+this.g_partA = new PartSys();
+};
+
+particle3D.prototype.init = function(count) { 
+
+  this.shaderLoc = createProgram(gl, this.VSHADER_SOURCE_PARTICLE, this.FSHADER_SOURCE_PARTICLE);
+  if (!this.shaderLoc) {
+    console.log(this.constructor.name + 
+                '.init() failed to create executable Shaders on the GPU. Bye!');
+    return;
+  }
+  this.g_partA.initBouncy3D(count, this.shaderLoc);
+}
+
+particle3D.prototype.draw = function() {
+  // check: was WebGL context set to use our VBO & shader program?
+
+    this.g_partA.switchToMe()
+    this.g_partA.isReady();
+    this.g_partA.applyForces(this.g_partA.s1, this.g_partA.forceList);
+    this.g_partA.dotFinder(this.g_partA.s1dot, this.g_partA.s1);
+    this.g_partA.solver();
+    this.g_partA.doConstraints(this.g_partA.s1, this.g_partA.s2, this.g_partA.limitList);
+    this.g_partA.particleBehaviour();
+    this.g_partA.render3D();
+    this.g_partA.swap();
+}
+
+particle3D.prototype.render = function() {
+
+  this.g_partA.switchToMe();
+  this.g_partA.isReady();
+  this.g_partA.render3D();
+}
+
+particle3D.prototype.debug = function () {
+    this.g_partA.printPosition(this.g_partA.s1);
+}
+
+//==============================================================================
+//==============================================================================
+
+function particleFire() {
+    //=============================================================================
+    //=============================================================================
+
+    this.VSHADER_SOURCE_PARTICLE =
+        ' precision mediump float;                 \n' + // req'd in OpenGL ES if we use 'float'
+        ' uniform    int u_runMode;                \n' + // particle system state: 
+        ' attribute float a_Size;                  \n' +
+        ' attribute vec4 a_Position;               \n' +
+        ' attribute vec3 a_Color;                  \n' +
+        ' uniform   mat4 u_ModelMat;               \n' +
+        ' varying   vec4 v_Color;                  \n' +
+        ' void main() {                            \n' +
+        '   gl_PointSize = a_Size;                 \n' +// TRY MAKING THIS LARGER...
+        '   gl_Position = u_ModelMat * a_Position; \n' +
+        '   if(u_runMode == 0) {                   \n' +
+        '     v_Color = vec4(1.0, 0.0, 0.0, 1.0);  \n' +   // red: 0==reset
+        '     }                                    \n' +
+        '   else if(u_runMode == 1) {              \n' +
+        '     v_Color = vec4(1.0, 1.0, 0.0, 1.0);  \n' +  // yellow: 1==pause
+        '     }                                    \n' +
+        '   else if(u_runMode == 2) {              \n' +
+        '     v_Color = vec4(1.0, 1.0, 1.0, 1.0);  \n' +  // white: 2==step
+        '     }                                    \n' +
+        '   else {                                 \n' +
+        '     v_Color = vec4(a_Color, 1.0);        \n' +  // green: >=3 ==run
+        '     }                                    \n' +
+        ' }                                        \n';
+
+    this.FSHADER_SOURCE_PARTICLE =
+        'precision mediump float;                                 \n' +
+        'varying vec4 v_Color;                                    \n' +
+        'void main() {                                            \n' +
+        '  float dist = distance(gl_PointCoord, vec2(0.5, 0.5));  \n' +
+        '  if(dist < 0.5) {                                       \n' +
+        '   gl_FragColor = vec4((1.0-2.0*dist)*v_Color.rgb, 1.0); \n' +
+        '  } else { discard; }                                    \n' +
+        '}                                                        \n';
+
+    this.g_partA = new PartSys();
+};
+
+particleFire.prototype.init = function (count) {
+
+    this.shaderLoc = createProgram(gl, this.VSHADER_SOURCE_PARTICLE, this.FSHADER_SOURCE_PARTICLE);
+    if (!this.shaderLoc) {
+        console.log(this.constructor.name +
+            '.init() failed to create executable Shaders on the GPU. Bye!');
+        return;
+    }
+    this.g_partA.initFireReeves(count, this.shaderLoc);
+}
+
+particleFire.prototype.draw = function () {
+    // check: was WebGL context set to use our VBO & shader program?
+
+    this.g_partA.switchToMe()
+    this.g_partA.isReady();
+    this.g_partA.applyForces(this.g_partA.s1, this.g_partA.forceList);
+    this.g_partA.dotFinder(this.g_partA.s1dot, this.g_partA.s1);
+    this.g_partA.solver();
+    this.g_partA.doConstraints(this.g_partA.s1, this.g_partA.s2, this.g_partA.limitList);
+    this.g_partA.particleBehaviour();
+    this.g_partA.render3D();
+    this.g_partA.swap();
+}
+
+particleFire.prototype.render = function () {
+
+    this.g_partA.switchToMe();
+    this.g_partA.isReady();
+    this.g_partA.render3D();
+}
+
+particleFire.prototype.debug = function () {
+    this.g_partA.printPosition(this.g_partA.s1);
+}
+
+//==============================================================================
+//==============================================================================
+
+function particleSpringPair() {
+    //=============================================================================
+    //=============================================================================
+
+    this.VSHADER_SOURCE_PARTICLE =
+        ' precision mediump float;                 \n' + // req'd in OpenGL ES if we use 'float'
+        ' uniform    int u_runMode;                \n' + // particle system state: 
+        ' attribute float a_Size;                  \n' +
+        ' attribute vec4 a_Position;               \n' +
+        ' attribute vec3 a_Color;                  \n' +
+        ' uniform   mat4 u_ModelMat;               \n' +
+        ' varying   vec4 v_Color;                  \n' +
+        ' void main() {                            \n' +
+        '   gl_PointSize = a_Size;                 \n' +// TRY MAKING THIS LARGER...
+        '   gl_Position = u_ModelMat * a_Position; \n' +
+        '   if(u_runMode == 0) {                   \n' +
+        '     v_Color = vec4(1.0, 0.0, 0.0, 1.0);  \n' +   // red: 0==reset
+        '     }                                    \n' +
+        '   else if(u_runMode == 1) {              \n' +
+        '     v_Color = vec4(1.0, 1.0, 0.0, 1.0);  \n' +  // yellow: 1==pause
+        '     }                                    \n' +
+        '   else if(u_runMode == 2) {              \n' +
+        '     v_Color = vec4(1.0, 1.0, 1.0, 1.0);  \n' +  // white: 2==step
+        '     }                                    \n' +
+        '   else {                                 \n' +
+        '     v_Color = vec4(a_Color, 1.0);        \n' +  // green: >=3 ==run
+        '     }                                    \n' +
+        ' }                                        \n';
+
+    this.FSHADER_SOURCE_PARTICLE =
+        'precision mediump float;                                 \n' +
+        'varying vec4 v_Color;                                    \n' +
+        'void main() {                                            \n' +
+        '  float dist = distance(gl_PointCoord, vec2(0.5, 0.5));  \n' +
+        '  if(dist < 0.5) {                                       \n' +
+        '   gl_FragColor = vec4((1.0-2.0*dist)*v_Color.rgb, 1.0); \n' +
+        '  } else { discard; }                                    \n' +
+        '}                                                        \n';
+
+    this.g_partA = new PartSys();
+};
+
+particleSpringPair.prototype.init = function () {
+
+    this.shaderLoc = createProgram(gl, this.VSHADER_SOURCE_PARTICLE, this.FSHADER_SOURCE_PARTICLE);
+    if (!this.shaderLoc) {
+        console.log(this.constructor.name +
+            '.init() failed to create executable Shaders on the GPU. Bye!');
+        return;
+    }
+    this.g_partA.initSpringPair(this.shaderLoc);
+}
+
+particleSpringPair.prototype.draw = function () {
+    // check: was WebGL context set to use our VBO & shader program?
+
+    this.g_partA.switchToMe()
+    this.g_partA.isReady();
+    this.g_partA.applyForces(this.g_partA.s1, this.g_partA.forceList);
+    this.g_partA.dotFinder(this.g_partA.s1dot, this.g_partA.s1);
+    this.g_partA.solver();
+    this.g_partA.doConstraints(this.g_partA.s1, this.g_partA.s2, this.g_partA.limitList);
+    this.g_partA.particleBehaviour();
+    this.g_partA.render3D();
+    this.g_partA.swap();
+}
+
+particleSpringPair.prototype.render = function () {
+
+    this.g_partA.switchToMe();
+    this.g_partA.isReady();
+    this.g_partA.render3D();
+}
+
+particleSpringPair.prototype.debug = function () {
+    this.g_partA.printPosition(this.g_partA.s1);
 }

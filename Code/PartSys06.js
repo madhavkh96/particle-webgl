@@ -807,9 +807,234 @@ PartSys.prototype.initFlocking = function(count) {
 //==============================================================================
   console.log('PartSys.initFlocking() stub not finished!');
 }
-PartSys.prototype.initSpringPair = function() { 
-//==============================================================================
-  console.log('PartSys.initSpringPair() stub not finished!');
+
+PartSys.prototype.initSpringPair = function(shader) { 
+    //==============================================================================
+    // Create all state-variables-------------------------------------------------
+    this.partCount = 2;
+    this.s1 = new Float32Array(this.partCount * PART_MAXVAR);
+    this.s2 = new Float32Array(this.partCount * PART_MAXVAR);
+    this.s1dot = new Float32Array(this.partCount * PART_MAXVAR);
+
+    // NOTE: Float32Array objects are zero-filled by default.
+
+    // Create & init all force-causing objects------------------------------------
+    var fTmp = new CForcer();       // create a force-causing object, and
+    // earth gravity for all particles:
+    fTmp.forceType = F_GRAV_E;      // set it to earth gravity, and
+    fTmp.targFirst = 0;             // set it to affect ALL particles:
+    fTmp.targCount = -1;            // (negative value means ALL particles)
+    // (and IGNORE all other Cforcer members...)
+    //this.forceList.push(fTmp);      // append this 'gravity' force object to 
+    // the forceList array of force-causing objects.
+    // drag for all particles:
+    fTmp = new CForcer();           // create a NEW CForcer object 
+    // (WARNING! until we do this, fTmp refers to
+    // the same memory locations as forceList[0]!!!) 
+    fTmp.forceType = F_DRAG;        // Viscous Drag
+    fTmp.Kdrag = 0.9;               // in Euler solver, scales velocity by 0.85
+    fTmp.targFirst = 0;             // apply it to ALL particles:
+    fTmp.partCount = -1;            // (negative value means ALL particles)
+    // (and IGNORE all other Cforcer members...)
+    this.forceList.push(fTmp);      // append this 'gravity' force object to 
+    // the forceList array of force-causing objects.
+    fTmp = new CForcer();
+
+    fTmp.forceType = F_SPRING;
+    fTmp.K_spring = 5;
+    fTmp.K_springDamp = 0.1;
+    fTmp.k_restLength = 5;
+
+    this.forceList.push(fTmp);
+
+    this.particleSystemType = SPRING_PAIR;
+
+    // Report:
+    console.log("PartSys.initBouncy3D() created PartSys.forceList[] array of ");
+    console.log("\t\t", this.forceList.length, "CForcer objects:");
+    for (i = 0; i < this.forceList.length; i++) {
+        console.log("CForceList[", i, "]");
+        this.forceList[i].printMe();
+    }
+
+    // Create & init all constraint-causing objects-------------------------------
+    var cTmp = new CLimit();      // creat constraint-causing object, and
+    cTmp.hitType = HIT_BOUNCE_VEL;  // set how particles 'bounce' from its surface,
+    cTmp.limitType = LIM_VOL;       // confine particles inside axis-aligned 
+    // rectangular volume that
+    cTmp.targFirst = 0;             // applies to ALL particles; starting at 0 
+    cTmp.partCount = -1;            // through all the rest of them.
+    cTmp.xMin = -0.95; cTmp.xMax = 0.95;  // box extent:  +/- 1.0 box at origin
+    cTmp.yMin = -0.95; cTmp.yMax = 0.95;
+    cTmp.zMin = -0.95; cTmp.zMax = 0.95;
+    cTmp.Kresti = 1.0;              // bouncyness: coeff. of restitution.
+    // (and IGNORE all other CLimit members...)
+    this.limitList.push(cTmp);      // append this 'box' constraint object to the
+    // 'limitList' array of constraint-causing objects.
+    //cTmp = new CLimit();
+    //cTmp.limitType = LIM_ANCHOR;
+    //cTmp.anchorPoint = 0;
+    //cTmp.anchorPosition = new Vector4([0, 0.45, 0, 1]);
+    //this.limitList.push(cTmp);
+    // Report:
+    console.log("PartSys.initBouncy3D() created PartSys.limitList[] array of ");
+    console.log("\t\t", this.limitList.length, "CLimit objects.");
+
+    this.INIT_VEL = 0.15 * 60.0;   // initial velocity in meters/sec.
+    // adjust by ++Start, --Start buttons. Original value 
+    // was 0.15 meters per timestep; multiply by 60 to get
+    // meters per second.
+    this.drag = 0.9;/*0.985;*/// units-free air-drag (scales velocity); adjust by d/D keys
+    this.grav = 9.832;// gravity's acceleration(meter/sec^2); adjust by g/G keys.
+    // on Earth surface, value is 9.832 meters/sec^2.
+    this.resti = 1.0; // units-free 'Coefficient of Restitution' for 
+    // inelastic collisions.  Sets the fraction of momentum 
+    // (0.0 <= resti < 1.0) that remains after a ball 
+    // 'bounces' on a wall or floor, as computed using 
+    // velocity perpendicular to the surface. 
+    // (Recall: momentum==mass*velocity.  If ball mass does 
+    // not change, and the ball bounces off the x==0 wall,
+    // its x velocity xvel will change to -xvel * resti ).
+
+    //--------------------------init Particle System Controls:
+    this.runMode = 3;// Master Control: 0=reset; 1= pause; 2=step; 3=run
+    this.solvType = SOLV_BACK_MIDPT;// adjust by s/S keys.
+    // SOLV_EULER (explicit, forward-time, as 
+    // found in BouncyBall03.01BAD and BouncyBall04.01badMKS)
+    // SOLV_OLDGOOD for special-case implicit solver, reverse-time, 
+    // as found in BouncyBall03.GOOD, BouncyBall04.goodMKS)
+    this.bounceType = 1;  // floor-bounce constraint type:
+    // ==0 for velocity-reversal, as in all previous versions
+    // ==1 for Chapter 3's collision resolution method, which
+    // uses an 'impulse' to cancel any velocity boost caused
+    // by falling below the floor.
+    this.shader = shader;
+    this.ModelMatrix = new Matrix4();
+    this.particleColor = new Vector4();
+    this.uLoc_ModelMatrix = false;
+    this.uLoc_Color = false;
+    this.u_runModeID = false;
+    this.size = 100.0;
+
+
+    gl.program = this.shader;
+    gl.useProgram(this.shader);
+    //--------------------------------Create & fill VBO with state var s1 contents:
+    // INITIALIZE s1, s2:
+    //  NOTE: s1,s2 are a Float32Array objects, zero-filled by default.
+    // That's OK for most particle parameters, but these need non-zero defaults:
+
+    var j = 0;  // i==particle number; j==array index for i-th particle
+    for (var i = 0; i < this.partCount; i += 1, j += PART_MAXVAR) {
+        this.roundRand();       // set this.randX,randY,randZ to random location in 
+        // a 3D unit sphere centered at the origin.
+        //all our bouncy-balls stay within a +/- 0.9 cube centered at origin; 
+        // set random positions in a 0.1-radius ball centered at (-0.8,-0.8,-0.8)
+        this.s1[j + PART_XPOS] = -0.8 + 0.1 * this.randX;
+        this.s1[j + PART_YPOS] = -0.8 + 0.1 * this.randY;
+        this.s1[j + PART_ZPOS] = -0.8 + 0.1 * this.randZ;
+        this.s1[j + PART_WPOS] = 1.0;      // position 'w' coordinate;
+        this.roundRand(); // Now choose random initial velocities too:
+        this.s1[j + PART_XVEL] = this.INIT_VEL * (0.4 + 0.2 * this.randX) * 0.0;
+        this.s1[j + PART_YVEL] = this.INIT_VEL * (0.4 + 0.2 * this.randY) * 0.0;
+        this.s1[j + PART_ZVEL] = this.INIT_VEL * (0.4 + 0.2 * this.randZ) * 0.0;
+        this.s1[j + PART_MASS] = 1.0;      // mass, in kg.
+        this.s1[j + PART_DIAM] = this.size; // on-screen diameter, in pixels
+        this.s1[j + PART_RENDMODE] = 0.0;
+        this.s1[j + PART_AGE] = 30 + 100 * Math.random();
+        this.s1[j + PART_R] = 1.0;
+        this.s1[j + PART_G] = 0.5;
+        this.s1[j + PART_B] = 0.1;
+        var distance = this.calculateDistance(this.s1[j + PART_XPOS], this.s1[j + PART_YPOS], this.s1[j + PART_ZPOS])
+        var size = this.size / distance;
+        this.s1[j + PART_SIZE] = size;
+        //----------------------------
+        this.s2.set(this.s1);   // COPY contents of state-vector s1 to s2.
+    }
+
+    this.FSIZE = this.s1.BYTES_PER_ELEMENT;  // 'float' size, in bytes.
+    // Create a vertex buffer object (VBO) in the graphics hardware: get its ID# 
+    this.vboID = gl.createBuffer();
+    if (!this.vboID) {
+        console.log('PartSys.init() Failed to create the VBO object in the GPU');
+        return -1;
+    }
+    // "Bind the new buffer object (memory in the graphics system) to target"
+    // In other words, specify the usage of one selected buffer object.
+    // What's a "Target"? it's the poorly-chosen OpenGL/WebGL name for the 
+    // intended use of this buffer's memory; so far, we have just two choices:
+    //  == "gl.ARRAY_BUFFER" meaning the buffer object holds actual values we 
+    //      need for rendering (positions, colors, normals, etc), or 
+    //  == "gl.ELEMENT_ARRAY_BUFFER" meaning the buffer object holds indices 
+    //      into a list of values we need; indices such as object #s, face #s, 
+    //      edge vertex #s.
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vboID);
+
+    // Write data from our JavaScript array to graphics systems' buffer object:
+    gl.bufferData(gl.ARRAY_BUFFER, this.s1, gl.DYNAMIC_DRAW);
+    // why 'DYNAMIC_DRAW'? Because we change VBO's content with bufferSubData() later
+
+    // ---------Set up all attributes for VBO contents:
+    //Get the ID# for the a_Position variable in the graphics hardware
+    this.a_PositionID = gl.getAttribLocation(gl.program, 'a_Position');
+    if (this.a_PositionID < 0) {
+        console.log('PartSys.init() Failed to get the storage location of a_Position');
+        return -1;
+    }
+    // Tell GLSL to fill the 'a_Position' attribute variable for each shader with
+    // values from the buffer object chosen by 'gl.bindBuffer()' command.
+    // websearch yields OpenGL version: 
+    //    http://www.opengl.org/sdk/docs/man/xhtml/glVertexAttribPointer.xml
+    gl.vertexAttribPointer(this.a_PositionID,
+        4,  // # of values in this attrib (1,2,3,4) 
+        gl.FLOAT, // data type (usually gl.FLOAT)
+        false,    // use integer normalizing? (usually false)
+        PART_MAXVAR * this.FSIZE,  // Stride: #bytes from 1st stored value to next one
+        PART_XPOS * this.FSIZE); // Offset; #bytes from start of buffer to 
+    // 1st stored attrib value we will actually use.
+    // Enable this assignment of the bound buffer to the a_Position variable:
+    gl.enableVertexAttribArray(this.a_PositionID);
+
+    this.a_SizeID = gl.getAttribLocation(gl.program, 'a_Size');
+    if (this.a_SizeID < 0) {
+        console.log('PartSys.init() Failed to get the storage location of a_Size');
+        return -1;
+    }
+
+    gl.vertexAttribPointer(this.a_SizeID, 1, gl.FLOAT, false, PART_MAXVAR * this.FSIZE, PART_DIAM * this.FSIZE);
+
+    gl.enableVertexAttribArray(this.a_SizeID);
+
+
+    this.a_ColorID = gl.getAttribLocation(gl.program, 'a_Color');
+    if (this.a_ColorID < 0) {
+        console.log('PartSys.init() Failed to get the storage location of a_Color');
+    }
+
+    gl.vertexAttribPointer(this.a_ColorID, 3, gl.FLOAT, false, PART_MAXVAR * this.FSIZE, PART_R * this.FSIZE);
+
+    gl.enableVertexAttribArray(this.a_ColorID);
+
+    // ---------Set up all uniforms we send to the GPU:
+    // Get graphics system storage location of each uniform our shaders use:
+    // (why? see  http://www.opengl.org/wiki/Uniform_(GLSL) )
+    this.u_runModeID = gl.getUniformLocation(gl.program, 'u_runMode');
+    if (!this.u_runModeID) {
+        console.log('PartSys.init() Failed to get u_runMode variable location');
+        return;
+    }
+
+    this.uLoc_ModelMatrix = gl.getUniformLocation(gl.program, 'u_ModelMat');
+    if (!this.uLoc_ModelMatrix) {
+        console.log('PartSys.init() Failed to get u_ModelMat variable location');
+    }
+
+
+    // Set the initial values of all uniforms on GPU: (runMode set by keyboard)
+    gl.uniform1i(this.u_runModeID, this.runMode);
+    gl.uniformMatrix4fv(this.uLoc_ModelMatrix, false, this.ModelMatrix.elements);
+    gl.uniform1f(this.uLoc_size, this.size);
+
 }
 PartSys.prototype.initSpringRope = function(count) { 
 //==============================================================================
@@ -919,9 +1144,36 @@ PartSys.prototype.applyForces = function(s, fList) {
           }
         break;
       case F_SPRING:
-        console.log("PartSys.applyForces(), fList[",k,"].forceType:", 
-                                  fList[k].forceType, "NOT YET IMPLEMENTED!!");
-        break;
+            var particle1SpringForceX = -fList[k].K_spring * (s[PART_XPOS] - s[PART_MAXVAR + PART_XPOS]);
+            var particle1SpringForceY = -fList[k].K_spring * (s[PART_YPOS] - s[PART_MAXVAR + PART_YPOS]);
+            var particle1SpringForceZ = -fList[k].K_spring * (s[PART_ZPOS] - s[PART_MAXVAR + PART_ZPOS]);
+
+            //Spring Force on Particle 2
+            var particle2SpringForceX = -fList[k].K_spring * (s[PART_MAXVAR + PART_XPOS] - s[PART_XPOS]);
+            var particle2SpringForceY = -fList[k].K_spring * (s[PART_MAXVAR + PART_YPOS] - s[PART_YPOS]);
+            var particle2SpringForceZ = -fList[k].K_spring * (s[PART_MAXVAR + PART_ZPOS] - s[PART_ZPOS]);
+
+            //Particle 1 Damping force
+            var particle1DampingForceX = fList[k].K_springDamp * s[PART_XVEL];
+            var particle1DampingForceY = fList[k].K_springDamp * s[PART_YVEL];
+            var particle1DampingForceZ = fList[k].K_springDamp * s[PART_ZVEL];
+
+            // Particle 2 Damping force
+            var particle2DampingForceX = fList[k].K_springDamp * s[PART_MAXVAR + PART_XVEL];
+            var particle2DampingForceY = fList[k].K_springDamp * s[PART_MAXVAR + PART_YVEL];
+            var particle2DampingForceZ = fList[k].K_springDamp * s[PART_MAXVAR + PART_ZVEL];
+
+            // Particle 1 Net force
+            s[PART_X_FTOT] = particle1SpringForceX - particle1DampingForceX - particle2SpringForceX + particle2DampingForceX;
+            s[PART_Y_FTOT] = particle1SpringForceY - particle1DampingForceY - particle2SpringForceY + particle2DampingForceY;
+            s[PART_Z_FTOT] = particle1SpringForceZ - particle1DampingForceZ - particle2SpringForceZ + particle2DampingForceZ;
+
+            // Particle 2 Net force
+            s[PART_MAXVAR + PART_X_FTOT] = particle2SpringForceX - particle2DampingForceX - particle1SpringForceX + particle1DampingForceX;
+            s[PART_MAXVAR + PART_X_FTOT] = particle2SpringForceY - particle2DampingForceY - particle1SpringForceY + particle1DampingForceY;
+            s[PART_MAXVAR + PART_X_FTOT] = particle2SpringForceZ - particle2DampingForceZ - particle1SpringForceZ + particle1DampingForceZ;
+            break;
+
       case F_SPRINGSET:
         console.log("PartSys.applyForces(), fList[",k,"].forceType:", 
                                   fList[k].forceType, "NOT YET IMPLEMENTED!!");
@@ -1337,12 +1589,29 @@ PartSys.prototype.doConstraints = function(sNow, sNext, cList) {
             break;
         case LIM_MAT_DISC:
             break;
-        case LIM_MAT_:
-
+        case LIM_MAT_BALL:
             break;
-      default:
-        console.log("!!!doConstraints() cList[",k,"] invalid limitType:", cList[k].limitType);
-        break;
+        case LIM_MAT_DISC:
+            break;
+        case LIM_ANCHOR:
+            var anchorPoint = cList[k].anchorPoint * PART_MAXVAR;
+            sNext[anchorPoint + PART_XPOS] = cList[k].anchorPosition.elements[0];
+            sNext[anchorPoint + PART_YPOS] = cList[k].anchorPosition.elements[1];
+            sNext[anchorPoint + PART_ZPOS] = cList[k].anchorPosition.elements[2];
+            break;
+        case LIM_SLOT:
+            break;
+        case LIM_ROD:
+            break;
+        case LIM_ROPE:
+            break;
+        case LIM_RADIUS:
+            break;
+        case LIM_PULLEY:
+            break;
+        default:
+            console.log("!!!doConstraints() cList[", k, "] invalid limitType:", cList[k].limitType);
+            break;
     } // switch(cList[k].limitType) ebd
   } // for(k=0...) end
 }
@@ -1388,6 +1657,9 @@ PartSys.prototype.particleBehaviour = function () {
                     this.s2[j + PART_SIZE] = 10;
                 } // if age <=0
             } // for loop thru all particles
+            break;
+        case SPRING_PAIR:
+            console.log("No Special Behviour Programmed");
             break;
         default:
             console.log("Invalid Input");
