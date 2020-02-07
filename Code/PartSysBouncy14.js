@@ -89,20 +89,22 @@ var g_angleRate = 10.0;
 
 var g_ModelMatrix = new Matrix4();
 
-var x_lookAt =   -1;
-var y_lookAt =   -2;
-var z_lookAt = 0.25;
+var x_lookAt =   0;
+var y_lookAt =   0;
+var z_lookAt = 1;
 var lookAtVector = new Vector3([x_lookAt, y_lookAt, z_lookAt]);
 var current_rotation = 0;
 var x_Coordinate = 1;
-var y_Coordinate = 1;
-var z_Coordinate = 0.25;
+var y_Coordinate = 5;
+var z_Coordinate = 2;
 var eyePosVector = new Vector3([x_Coordinate, y_Coordinate, z_Coordinate]);
 
 // Our first global particle system object; contains 'state variables' s1,s2;
 //---------------------------------------------------------
 groundPlane = new groundVBO();
-particleSys3D = new particle3D();
+//particleSys3D = new particle3D();
+particleSys3D = new particleFire();
+cube = new drawCube();
 
 function main() {
 //==============================================================================
@@ -164,12 +166,14 @@ function main() {
 	// END Keyboard & Mouse Event-Handlers---------------------------------------
 
   gl.clearColor(0.25, 0.25, 0.25, 1);	// RGBA color for clearing WebGL framebuffer
-  gl.clear(gl.COLOR_BUFFER_BIT);		  // clear it once to set that color as bkgnd.
+    gl.clear(gl.COLOR_BUFFER_BIT);		  // clear it once to set that color as bkgnd.
+    gl.enable(gl.DEPTH_TEST);
 
   // Initialize Particle systems:
   
-  groundPlane.init();
-  particleSys3D.init(20);
+    groundPlane.init();
+    cube.init();
+    particleSys3D.init(2000);
 
    vpAspect = g_canvas.width /     // On-screen aspect ratio for
              g_canvas.height ;  // this camera: width/height.
@@ -232,7 +236,7 @@ function animate() {
 function drawAll() {
 //============================================================================== 
   // Clear WebGL frame-buffer? (The 'c' or 'C' key toggles g_isClear between 0 & 1).
-  if(g_isClear == 1) gl.clear(gl.COLOR_BUFFER_BIT);
+    if (g_isClear == 1) gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 // *** SURPRISE! ***
 //  What happens when you forget (or comment-out) this gl.clear() call?
 // In OpenGL (but not WebGL), you'd see 'trails' of particles caused by drawing 
@@ -248,9 +252,13 @@ function drawAll() {
 // https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/getContext
 	
 // update particle system state? 
-groundPlane.switchToMe();
-groundPlane.adjust();
-groundPlane.render();
+    groundPlane.switchToMe();
+    groundPlane.adjust();
+    groundPlane.render();
+
+    cube.switchToMe();
+    cube.adjust();
+    cube.render();
 
   if(  particleSys3D.g_partA.runMode > 1) {					// 0=reset; 1= pause; 2=step; 3=run
     // YES! advance particle system(s) by 1 timestep.
@@ -277,8 +285,10 @@ groundPlane.render();
     //===========================================
 	  }
 	else {    // runMode==0 (reset) or ==1 (pause): re-draw existing particles.
-    groundPlane.switchToMe();
-    groundPlane.render();
+      groundPlane.switchToMe();
+      groundPlane.render();
+      cube.switchToMe();
+      cube.render();
 	  particleSys3D.render();
 	  }
 	printControls();		// Display particle-system status on-screen. 
@@ -482,7 +492,7 @@ function myKeyDown(kev) {
               "\n--kev.altKey:",  kev.altKey,   "\t--kev.metaKey:", kev.metaKey);
 */
   // On webpage, report EVERYTING about this key-down event:              
-	document.getElementById('KeyDown').innerHTML = ''; // clear old result
+  document.getElementById('KeyDown').innerHTML = ''; // clear old result
   document.getElementById('KeyMod').innerHTML = ''; 
   document.getElementById('KeyMod' ).innerHTML = 
         "   --kev.code:"+kev.code   +"      --kev.key:"+kev.key+
@@ -608,17 +618,17 @@ function myKeyDown(kev) {
         for(var i = 0; i < particleSys3D.g_partA.partCount; i += 1, j+= PART_MAXVAR) {
           particleSys3D.g_partA.roundRand();  // make a spherical random var.
     			if(  particleSys3D.g_partA.s2[j + PART_XVEL] > 0.0) // ADD to positive velocity, and 
-    			     particleSys3D.g_partA.s2[j + PART_XVEL] += 1.7 + 0.4*particleSys3D.g_partA.randX*particleSys3D.g_partA.INIT_VEL;
+    			     particleSys3D.g_partA.s1[j + PART_XVEL] += 1.7 + 0.4*particleSys3D.g_partA.randX*particleSys3D.g_partA.INIT_VEL;
     			                                      // SUBTRACT from negative velocity: 
-    			else particleSys3D.g_partA.s2[j + PART_XVEL] -= 1.7 + 0.4*particleSys3D.g_partA.randX*particleSys3D.g_partA.INIT_VEL; 
+    			else particleSys3D.g_partA.s1[j + PART_XVEL] -= 1.7 + 0.4*particleSys3D.g_partA.randX*particleSys3D.g_partA.INIT_VEL; 
 
     			if(  particleSys3D.g_partA.s2[j + PART_YVEL] > 0.0) 
-    			     particleSys3D.g_partA.s2[j + PART_YVEL] += 1.7 + 0.4*particleSys3D.g_partA.randY*particleSys3D.g_partA.INIT_VEL; 
-    			else particleSys3D.g_partA.s2[j + PART_YVEL] -= 1.7 + 0.4*particleSys3D.g_partA.randY*particleSys3D.g_partA.INIT_VEL;
+    			     particleSys3D.g_partA.s1[j + PART_YVEL] += 1.7 + 0.4*particleSys3D.g_partA.randY*particleSys3D.g_partA.INIT_VEL; 
+    			else particleSys3D.g_partA.s1[j + PART_YVEL] -= 1.7 + 0.4*particleSys3D.g_partA.randY*particleSys3D.g_partA.INIT_VEL;
 
     			if(  particleSys3D.g_partA.s2[j + PART_ZVEL] > 0.0) 
-    			     particleSys3D.g_partA.s2[j + PART_ZVEL] += 1.7 + 0.4*particleSys3D.g_partA.randZ*particleSys3D.g_partA.INIT_VEL; 
-    			else particleSys3D.g_partA.s2[j + PART_ZVEL] -= 1.7 + 0.4*particleSys3D.g_partA.randZ*particleSys3D.g_partA.INIT_VEL;
+    			     particleSys3D.g_partA.s1[j + PART_ZVEL] += 1.7 + 0.4*particleSys3D.g_partA.randZ*particleSys3D.g_partA.INIT_VEL; 
+    			else particleSys3D.g_partA.s1[j + PART_ZVEL] -= 1.7 + 0.4*particleSys3D.g_partA.randZ*particleSys3D.g_partA.INIT_VEL;
     			}
       }
       else {      // HARD reset: position AND velocity, BOTH state vectors:
