@@ -89,20 +89,27 @@ var g_angleRate = 10.0;
 
 var g_ModelMatrix = new Matrix4();
 
-var x_lookAt =   -1;
-var y_lookAt =   -2;
-var z_lookAt = 0.25;
+var x_lookAt =   0;
+var y_lookAt =   0;
+var z_lookAt = 1;
 var lookAtVector = new Vector3([x_lookAt, y_lookAt, z_lookAt]);
 var current_rotation = 0;
 var x_Coordinate = 1;
-var y_Coordinate = 1;
-var z_Coordinate = 0.25;
+var y_Coordinate = 5;
+var z_Coordinate = 2;
 var eyePosVector = new Vector3([x_Coordinate, y_Coordinate, z_Coordinate]);
 
 // Our first global particle system object; contains 'state variables' s1,s2;
 //---------------------------------------------------------
+
+var all_Particle_systems = [];
+var current_part_sys = 0;
 groundPlane = new groundVBO();
 particleSys3D = new particle3D();
+all_Particle_systems.push(particleSys3D);
+particleSysFire = new particleFire();
+all_Particle_systems.push(particleSysFire);
+cube = new drawCube();
 
 function main() {
 //==============================================================================
@@ -164,12 +171,15 @@ function main() {
 	// END Keyboard & Mouse Event-Handlers---------------------------------------
 
   gl.clearColor(0.25, 0.25, 0.25, 1);	// RGBA color for clearing WebGL framebuffer
-  gl.clear(gl.COLOR_BUFFER_BIT);		  // clear it once to set that color as bkgnd.
+    gl.clear(gl.COLOR_BUFFER_BIT);		  // clear it once to set that color as bkgnd.
+    gl.enable(gl.DEPTH_TEST);
 
   // Initialize Particle systems:
   
-  groundPlane.init();
-  particleSys3D.init(20);
+    groundPlane.init();
+    cube.init();
+    particleSys3D.init(200);
+    particleSysFire.init(2000);
 
    vpAspect = g_canvas.width /     // On-screen aspect ratio for
              g_canvas.height ;  // this camera: width/height.
@@ -230,62 +240,89 @@ function animate() {
 }
 
 function drawAll() {
-//============================================================================== 
-  // Clear WebGL frame-buffer? (The 'c' or 'C' key toggles g_isClear between 0 & 1).
-  if(g_isClear == 1) gl.clear(gl.COLOR_BUFFER_BIT);
-// *** SURPRISE! ***
-//  What happens when you forget (or comment-out) this gl.clear() call?
-// In OpenGL (but not WebGL), you'd see 'trails' of particles caused by drawing 
-// without clearing any previous drawing. But not in WebGL; by default, HTML-5 
-// clears the canvas to white (your browser's default webpage color).  To see 
-// 'trails' in WebGL you must disable the canvas' own screen clearing.  HOW?
-// -- in main() where we create our WebGL drawing context, 
-// replace this (default):  
-//          gl = g_canvas.getContext("webgl");
-// -- with this:
-//          gl = g_canvas.getContext("webgl", { preserveDrawingBuffer: true});
-// -- To learn more, see: 
-// https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/getContext
-	
-// update particle system state? 
-groundPlane.switchToMe();
-groundPlane.adjust();
-groundPlane.render();
+    //============================================================================== 
+    // Clear WebGL frame-buffer? (The 'c' or 'C' key toggles g_isClear between 0 & 1).
+    if (g_isClear == 1) gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    // *** SURPRISE! ***
+    //  What happens when you forget (or comment-out) this gl.clear() call?
+    // In OpenGL (but not WebGL), you'd see 'trails' of particles caused by drawing 
+    // without clearing any previous drawing. But not in WebGL; by default, HTML-5 
+    // clears the canvas to white (your browser's default webpage color).  To see 
+    // 'trails' in WebGL you must disable the canvas' own screen clearing.  HOW?
+    // -- in main() where we create our WebGL drawing context, 
+    // replace this (default):  
+    //          gl = g_canvas.getContext("webgl");
+    // -- with this:
+    //          gl = g_canvas.getContext("webgl", { preserveDrawingBuffer: true});
+    // -- To learn more, see: 
+    // https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/getContext
 
-  if(  particleSys3D.g_partA.runMode > 1) {					// 0=reset; 1= pause; 2=step; 3=run
-    // YES! advance particle system(s) by 1 timestep.
-		if(particleSys3D.g_partA.runMode == 2) { // (if runMode==2, do just one step & pause)
-		  particleSys3D.g_partA.runMode=1;	
-		  }                                 
-    //==========================================
-    //===========================================
-    //
-    //  PARTICLE SIMULATION LOOP: (see Lecture Notes D)
-    //
-    //==========================================
-    //==========================================    
-		// Make our 'bouncy-ball' move forward by one timestep, but now the 's' key 
-		// will select which kind of solver to use by changing g_partA.solvType:
-   //  g_partA.applyForces(g_partA.s1, g_partA.forceList);  // find current net force on each particle
-   //  g_partA.dotFinder(g_partA.s1dot, g_partA.s1); // find time-derivative s1dot from s1;
-   //  g_partA.solver();         // find s2 from s1 & related states.
-   //  g_partA.doConstraints();  // Apply all constraints.  s2 is ready!
-  	// g_partA.render();         // transfer current state to VBO, set uniforms, draw it!
-   //  g_partA.swap();           // Make s2 the new current state s1.s
-      particleSys3D.draw();
-    //===========================================
-    //===========================================
-	  }
-	else {    // runMode==0 (reset) or ==1 (pause): re-draw existing particles.
+    // update particle system state? 
     groundPlane.switchToMe();
+    groundPlane.adjust();
     groundPlane.render();
-	  particleSys3D.render();
-	  }
-	printControls();		// Display particle-system status on-screen. 
-                      // Report mouse-drag totals since last re-draw:
-	document.getElementById('MouseResult0').innerHTML=
-			'Mouse Drag totals (CVV coords):\t' + xMdragTot.toFixed(g_digits)+
-			                             ', \t' + yMdragTot.toFixed(g_digits);	
+
+    cube.switchToMe();
+    cube.adjust();
+    cube.render();
+
+    if (all_Particle_systems[current_part_sys].g_partA.runMode > 1) {					// 0=reset; 1= pause; 2=step; 3=run
+        // YES! advance particle system(s) by 1 timestep.
+        if (all_Particle_systems[current_part_sys].g_partA.runMode == 2) { // (if runMode==2, do just one step & pause)
+            all_Particle_systems[current_part_sys].g_partA.runMode = 1;
+        }
+        //==========================================
+        //===========================================
+        //
+        //  PARTICLE SIMULATION LOOP: (see Lecture Notes D)
+        //
+        //==========================================
+        //==========================================    
+        // Make our 'bouncy-ball' move forward by one timestep, but now the 's' key 
+        // will select which kind of solver to use by changing g_partA.solvType:
+        //  g_partA.applyForces(g_partA.s1, g_partA.forceList);  // find current net force on each particle
+        //  g_partA.dotFinder(g_partA.s1dot, g_partA.s1); // find time-derivative s1dot from s1;
+        //  g_partA.solver();         // find s2 from s1 & related states.
+        //  g_partA.doConstraints();  // Apply all constraints.  s2 is ready!
+        // g_partA.render();         // transfer current state to VBO, set uniforms, draw it!
+        //  g_partA.swap();           // Make s2 the new current state s1.s
+        switch (all_Particle_systems[current_part_sys].g_partA.particleSystemType) {
+            case BOUNCY_BALL:
+                particleSys3D.draw();
+                break;
+            case FIRE:
+                particleSysFire.draw();
+                break;
+            default:
+                console.log("Invalid Particle System");
+        }
+        //===========================================
+        //===========================================
+    }
+    else {    // runMode==0 (reset) or ==1 (pause): re-draw existing particles.
+
+        // Other Objects in Environment
+        groundPlane.switchToMe();
+        groundPlane.render();
+        cube.switchToMe();
+        cube.render();
+
+        switch (all_Particle_systems[current_part_sys].g_partA.particleSystemType) {
+            case BOUNCY_BALL:
+                particleSys3D.render();
+                break;
+            case FIRE:
+                particleSysFire.render();
+                break;
+            default:
+                console.log("Invalid Particle System");
+        }
+        printControls();		// Display particle-system status on-screen. 
+        // Report mouse-drag totals since last re-draw:
+        document.getElementById('MouseResult0').innerHTML =
+            'Mouse Drag totals (CVV coords):\t' + xMdragTot.toFixed(g_digits) +
+            ', \t' + yMdragTot.toFixed(g_digits);
+    }
 }
 
 //===================Mouse and Keyboard event-handling Callbacks===============
@@ -482,7 +519,7 @@ function myKeyDown(kev) {
               "\n--kev.altKey:",  kev.altKey,   "\t--kev.metaKey:", kev.metaKey);
 */
   // On webpage, report EVERYTING about this key-down event:              
-	document.getElementById('KeyDown').innerHTML = ''; // clear old result
+  document.getElementById('KeyDown').innerHTML = ''; // clear old result
   document.getElementById('KeyMod').innerHTML = ''; 
   document.getElementById('KeyMod' ).innerHTML = 
         "   --kev.code:"+kev.code   +"      --kev.key:"+kev.key+
@@ -523,35 +560,35 @@ function myKeyDown(kev) {
       rotationOnCamera(1, false);
       break;
     case "KeyL":
-      particleSys3D.debug();
+      all_Particle_systems[current_part_sys].debug();
       break;
     case "Digit0":
-			particleSys3D.g_partA.runMode = 0;			// RESET!
+			all_Particle_systems[current_part_sys].g_partA.runMode = 0;			// RESET!
 			document.getElementById('KeyDown').innerHTML =  
 			'myKeyDown() digit 0 key. Run Mode 0: RESET!';    // print on webpage,
 			console.log("Run Mode 0: RESET!");                // print on console.
       break;
     case "Digit1":
-			particleSys3D.g_partA.runMode = 1;			// PAUSE!
+			all_Particle_systems[current_part_sys].g_partA.runMode = 1;			// PAUSE!
 			document.getElementById('KeyDown').innerHTML =  
 			'myKeyDown() digit 1 key. Run Mode 1: PAUSE!';    // print on webpage,
 			console.log("Run Mode 1: PAUSE!");                // print on console.
       break;
     case "Digit2":
-			particleSys3D.g_partA.runMode = 2;			// STEP!
+			all_Particle_systems[current_part_sys].g_partA.runMode = 2;			// STEP!
 			document.getElementById('KeyDown').innerHTML =  
 			'myKeyDown() digit 2 key. Run Mode 2: STEP!';     // print on webpage,
 			console.log("Run Mode 2: STEP!");                 // print on console.
       break;
     case "Digit3":
-			particleSys3D.g_partA.runMode = 3;			// RESET!
+			all_Particle_systems[current_part_sys].g_partA.runMode = 3;			// RESET!
 			document.getElementById('KeyDown').innerHTML =  
 			'myKeyDown() digit 3 key. Run Mode 3: RUN!';      // print on webpage,
 			console.log("Run Mode 3: RUN!");                  // print on console.
       break;
     case "KeyB":                // Toggle floor-bounce constraint type
-			if(particleSys3D.g_partA.bounceType==0) particleSys3D.g_partA.bounceType = 1;   // impulsive vs simple
-			else particleSys3D.g_partA.bounceType = 0;
+			if(all_Particle_systems[current_part_sys].g_partA.bounceType==0) all_Particle_systems[current_part_sys].g_partA.bounceType = 1;   // impulsive vs simple
+			else all_Particle_systems[current_part_sys].g_partA.bounceType = 0;
 			document.getElementById('KeyDown').innerHTML =  
 			'myKeyDown() b/B key: toggle bounce mode.';	      // print on webpage,
 			console.log("b/B key: toggle bounce mode.");      // print on console. 
@@ -564,77 +601,81 @@ function myKeyDown(kev) {
 			console.log("c/C: toggle screen-clear g_isClear:",g_isClear); // print on console,
       break;
     case "KeyZ":      // 'd'  INCREASE drag loss; 'Z' to DECREASE drag loss
-      if(kev.shiftKey==false) particleSys3D.g_partA.drag *= 0.995; // permit less movement.
+      if(kev.shiftKey==false) all_Particle_systems[current_part_sys].g_partA.drag *= 0.995; // permit less movement.
       else {
-        particleSys3D.g_partA.drag *= 1.0 / 0.995;
-        if(particleSys3D.g_partA.drag > 1.0) particleSys3D.g_partA.drag = 1.0;  // don't let drag ADD energy!
+        all_Particle_systems[current_part_sys].g_partA.drag *= 1.0 / 0.995;
+        if(all_Particle_systems[current_part_sys].g_partA.drag > 1.0) all_Particle_systems[current_part_sys].g_partA.drag = 1.0;  // don't let drag ADD energy!
         }
 		document.getElementById('KeyDown').innerHTML =  
 		'myKeyDown() d/D key: grow/shrink drag.';	 // print on webpage,
 	  console.log("d/D: grow/shrink drag:", g_partA.drag); // print on console,
       break;
     case "KeyF":    // 'f' or 'F' to toggle particle fountain on/off
-      particleSys3D.g_partA.isFountain += 1;
-      if(particleSys3D.g_partA.isFountain > 1) particleSys3D.g_partA.isFountain = 0;
-	  document.getElementById('KeyDown').innerHTML =  
-	  "myKeyDown() f/F key: toggle age constraint (fountain).";	// print on webpage,
-			console.log("F: toggle age constraint (fountain)."); // print on console,
+          //particleSys3D.g_partA.isFountain += 1;
+          //if (particleSys3D.g_partA.current_particle_system >= particleSys3D.g_partA.total_particle_systems)
+          //    particleSys3D.g_partA.current_particle_system = 0;
+          current_part_sys += 1;
+          if (current_part_sys >= all_Particle_systems.length) current_part_sys = 0;
+          document.getElementById('KeyDown').innerHTML =  
+              "myKeyDown() f/F key: toggle age constraint (fountain).";	// print on webpage,
+          console.log("F: toggle age constraint (fountain)."); // print on console,
+
       break;
     case "KeyG":    // 'g' to REDUCE gravity; 'G' to increase.
       if(kev.shiftKey==false) 		particleSys3D.g_partA.grav *= 0.99;		// shrink 1%
-      else                        particleSys3D.g_partA.grav *= 1.0/0.98; // grow 2%
+      else                        all_Particle_systems[current_part_sys].g_partA.grav *= 1.0/0.98; // grow 2%
 	  document.getElementById('KeyDown').innerHTML =  
 	  'myKeyDown() g/G key: shrink/grow gravity.';	 			// print on webpage,
-	  console.log("g/G: shrink/grow gravity:", particleSys3D.g_partA.grav); 	// print on console,
+	  console.log("g/G: shrink/grow gravity:", all_Particle_systems[current_part_sys].g_partA.grav); 	// print on console,
       break;
     case "KeyM":    // 'm' to REDUCE mass; 'M' to increase.
-      if(kev.shiftKey==false)     particleSys3D.g_partA.mass *= 0.98;   // shrink 2%
-      else                        particleSys3D.g_partA.mass *= 1.0/0.98; // grow 2%  
+      if(kev.shiftKey==false)     all_Particle_systems[current_part_sys].g_partA.mass *= 0.98;   // shrink 2%
+      else                        all_Particle_systems[current_part_sys].g_partA.mass *= 1.0/0.98; // grow 2%  
 	  document.getElementById('KeyDown').innerHTML =  
 	  'myKeyDown() m/M key: shrink/grow mass.';	 				      // print on webpage,
-	  console.log("m/M: shrink/grow mass:", particleSys3D.g_partA.mass); 		// print on console,
+	  console.log("m/M: shrink/grow mass:", all_Particle_systems[current_part_sys].g_partA.mass); 		// print on console,
       break;
 	case "KeyP":
-	  if(particleSys3D.g_partA.runMode == 3) particleSys3D.g_partA.runMode = 1;		// if running, pause
-						  else particleSys3D.g_partA.runMode = 3;		          // if paused, run.
+	  if(all_Particle_systems[current_part_sys].g_partA.runMode == 3) all_Particle_systems[current_part_sys].g_partA.runMode = 1;		// if running, pause
+						  else all_Particle_systems[current_part_sys].g_partA.runMode = 3;		          // if paused, run.
 	  document.getElementById('KeyDown').innerHTML =  
 			  'myKeyDown() p/P key: toggle Pause/unPause!';    // print on webpage
 	  console.log("p/P key: toggle Pause/unPause!");   			// print on console,
 			break;
     case "KeyR":    // r/R for RESET: 
       if(kev.shiftKey==false) {   // 'r' key: SOFT reset; boost velocity only
-  		  particleSys3D.g_partA.runMode = 3;  // RUN!
+  		  all_Particle_systems[current_part_sys].g_partA.runMode = 3;  // RUN!
         var j=0; // array index for particle i
-        for(var i = 0; i < particleSys3D.g_partA.partCount; i += 1, j+= PART_MAXVAR) {
-          particleSys3D.g_partA.roundRand();  // make a spherical random var.
-    			if(  particleSys3D.g_partA.s2[j + PART_XVEL] > 0.0) // ADD to positive velocity, and 
-    			     particleSys3D.g_partA.s2[j + PART_XVEL] += 1.7 + 0.4*particleSys3D.g_partA.randX*particleSys3D.g_partA.INIT_VEL;
+        for(var i = 0; i < all_Particle_systems[current_part_sys].g_partA.partCount; i += 1, j+= PART_MAXVAR) {
+          all_Particle_systems[current_part_sys].g_partA.roundRand();  // make a spherical random var.
+    			if(  all_Particle_systems[current_part_sys].g_partA.s2[j + PART_XVEL] > 0.0) // ADD to positive velocity, and 
+    			     all_Particle_systems[current_part_sys].g_partA.s1[j + PART_XVEL] += 1.7 + 0.4*all_Particle_systems[current_part_sys].g_partA.randX*all_Particle_systems[current_part_sys].g_partA.INIT_VEL;
     			                                      // SUBTRACT from negative velocity: 
-    			else particleSys3D.g_partA.s2[j + PART_XVEL] -= 1.7 + 0.4*particleSys3D.g_partA.randX*particleSys3D.g_partA.INIT_VEL; 
+    			else all_Particle_systems[current_part_sys].g_partA.s1[j + PART_XVEL] -= 1.7 + 0.4*all_Particle_systems[current_part_sys].g_partA.randX*all_Particle_systems[current_part_sys].g_partA.INIT_VEL; 
 
-    			if(  particleSys3D.g_partA.s2[j + PART_YVEL] > 0.0) 
-    			     particleSys3D.g_partA.s2[j + PART_YVEL] += 1.7 + 0.4*particleSys3D.g_partA.randY*particleSys3D.g_partA.INIT_VEL; 
-    			else particleSys3D.g_partA.s2[j + PART_YVEL] -= 1.7 + 0.4*particleSys3D.g_partA.randY*particleSys3D.g_partA.INIT_VEL;
+    			if(  all_Particle_systems[current_part_sys].g_partA.s2[j + PART_YVEL] > 0.0) 
+    			     all_Particle_systems[current_part_sys].g_partA.s1[j + PART_YVEL] += 1.7 + 0.4*all_Particle_systems[current_part_sys].g_partA.randY*all_Particle_systems[current_part_sys].g_partA.INIT_VEL; 
+    			else all_Particle_systems[current_part_sys].g_partA.s1[j + PART_YVEL] -= 1.7 + 0.4*all_Particle_systems[current_part_sys].g_partA.randY*all_Particle_systems[current_part_sys].g_partA.INIT_VEL;
 
-    			if(  particleSys3D.g_partA.s2[j + PART_ZVEL] > 0.0) 
-    			     particleSys3D.g_partA.s2[j + PART_ZVEL] += 1.7 + 0.4*particleSys3D.g_partA.randZ*particleSys3D.g_partA.INIT_VEL; 
-    			else particleSys3D.g_partA.s2[j + PART_ZVEL] -= 1.7 + 0.4*particleSys3D.g_partA.randZ*particleSys3D.g_partA.INIT_VEL;
+    			if(  all_Particle_systems[current_part_sys].g_partA.s2[j + PART_ZVEL] > 0.0) 
+    			     all_Particle_systems[current_part_sys].g_partA.s1[j + PART_ZVEL] += 1.7 + 0.4*all_Particle_systems[current_part_sys].g_partA.randZ*all_Particle_systems[current_part_sys].g_partA.INIT_VEL; 
+    			else all_Particle_systems[current_part_sys].g_partA.s1[j + PART_ZVEL] -= 1.7 + 0.4*all_Particle_systems[current_part_sys].g_partA.randZ*all_Particle_systems[current_part_sys].g_partA.INIT_VEL;
     			}
       }
       else {      // HARD reset: position AND velocity, BOTH state vectors:
-  		  particleSys3D.g_partA.runMode = 0;			// RESET!
+  		  all_Particle_systems[current_part_sys].g_partA.runMode = 0;			// RESET!
         // Reset state vector s1 for ALL particles:
         var j=0; // array index for particle i
-        for(var i = 0; i < particleSys3D.g_partA.partCount; i += 1, j+= PART_MAXVAR) {
-              particleSys3D.g_partA.roundRand();
-        			particleSys3D.g_partA.s2[j + PART_XPOS] =  -0.9;      // lower-left corner of CVV
-        			particleSys3D.g_partA.s2[j + PART_YPOS] =  -0.9;      // with a 0.1 margin
-        			particleSys3D.g_partA.s2[j + PART_ZPOS] =  0.0;	
-        			particleSys3D.g_partA.s2[j + PART_XVEL] =  3.7 + 0.4*particleSys3D.g_partA.randX*particleSys3D.g_partA.INIT_VEL;	
-        			particleSys3D.g_partA.s2[j + PART_YVEL] =  3.7 + 0.4*particleSys3D.g_partA.randY*particleSys3D.g_partA.INIT_VEL; // initial velocity in meters/sec.
-              particleSys3D.g_partA.s2[j + PART_ZVEL] =  3.7 + 0.4*particleSys3D.g_partA.randZ*particleSys3D.g_partA.INIT_VEL;
+        for(var i = 0; i < all_Particle_systems[current_part_sys].g_partA.partCount; i += 1, j+= PART_MAXVAR) {
+              all_Particle_systems[current_part_sys].g_partA.roundRand();
+        			all_Particle_systems[current_part_sys].g_partA.s2[j + PART_XPOS] =  -0.9;      // lower-left corner of CVV
+        			all_Particle_systems[current_part_sys].g_partA.s2[j + PART_YPOS] =  -0.9;      // with a 0.1 margin
+        			all_Particle_systems[current_part_sys].g_partA.s2[j + PART_ZPOS] =  0.0;	
+        			all_Particle_systems[current_part_sys].g_partA.s2[j + PART_XVEL] =  3.7 + 0.4*all_Particle_systems[current_part_sys].g_partA.randX*all_Particle_systems[current_part_sys].g_partA.INIT_VEL;	
+        			all_Particle_systems[current_part_sys].g_partA.s2[j + PART_YVEL] =  3.7 + 0.4*all_Particle_systems[current_part_sys].g_partA.randY*all_Particle_systems[current_part_sys].g_partA.INIT_VEL; // initial velocity in meters/sec.
+              all_Particle_systems[current_part_sys].g_partA.s2[j + PART_ZVEL] =  3.7 + 0.4*all_Particle_systems[current_part_sys].g_partA.randZ*all_Particle_systems[current_part_sys].g_partA.INIT_VEL;
               // do state-vector s2 as well: just copy all elements of the float32array.
-              particleSys3D.g_partA.s2.set(g_partA.s1);
+              all_Particle_systems[current_part_sys].g_partA.s2.set(g_partA.s1);
         } // end for loop
       } // end HARD reset
 	  document.getElementById('KeyDown').innerHTML =  
@@ -642,14 +683,14 @@ function myKeyDown(kev) {
 	  console.log("r/R: soft/hard Reset");      // print on console,
       break;
 		case "KeyS":
-			if(particleSys3D.g_partA.solvType == SOLV_EULER) particleSys3D.g_partA.solvType = SOLV_OLDGOOD;  
-			else particleSys3D.g_partA.solvType = SOLV_EULER;     
+			if(all_Particle_systems[current_part_sys].g_partA.solvType == SOLV_EULER) all_Particle_systems[current_part_sys].g_partA.solvType = SOLV_OLDGOOD;  
+			else all_Particle_systems[current_part_sys].g_partA.solvType = SOLV_EULER;     
 			document.getElementById('KeyDown').innerHTML =  
 			'myKeyDown() found s/S key. Switch solvers!';       // print on webpage.
-		  console.log("s/S: Change Solver:", particleSys3D.g_partA.solvType); // print on console.
+		  console.log("s/S: Change Solver:", all_Particle_systems[current_part_sys].g_partA.solvType); // print on console.
 			break;
 		case "Space":
-      particleSys3D.g_partA.runMode = 2;
+      all_Particle_systems[current_part_sys].g_partA.runMode = 2;
 	  document.getElementById('KeyDown').innerHTML =  
 	  'myKeyDown() found Space key. Single-step!';   // print on webpage,
       console.log("SPACE bar: Single-step!");        // print on console.
@@ -708,25 +749,25 @@ function printControls() {
 	var recipMin  = 1000.0 / g_timeStepMin;
 	var recipMax  = 1000.0 / g_timeStepMax; 
 	var solvTypeTxt;												// convert solver number to text:
-	if(particleSys3D.g_partA.solvType==0) solvTypeTxt = 'Explicit--(unstable!)<br>';
+	if(all_Particle_systems[current_part_sys].g_partA.solvType==0) solvTypeTxt = 'Explicit--(unstable!)<br>';
 	                  else  solvTypeTxt = 'Implicit--(stable)<br>'; 
 	var bounceTypeTxt;											// convert bounce number to text
-	if(particleSys3D.g_partA.bounceType==0) bounceTypeTxt = 'Velocity Reverse(no rest)<br>';
+	if(all_Particle_systems[current_part_sys].g_partA.bounceType==0) bounceTypeTxt = 'Velocity Reverse(no rest)<br>';
 	                     else bounceTypeTxt = 'Impulsive (will rest)<br>';
 	var fountainText;
-	if(particleSys3D.g_partA.isFountain==0) fountainText = 'OFF: ageless particles.<br>';
+	if(all_Particle_systems[current_part_sys].g_partA.isFountain==0) fountainText = 'OFF: ageless particles.<br>';
 	else                      fountainText = 'ON: re-cycle old particles.<br>';
-	var xvLimit = particleSys3D.g_partA.s2[PART_XVEL];	// find absolute values of s2[PART_XVEL]
-	if(particleSys3D.g_partA.s2[PART_XVEL] < 0.0) xvLimit = -particleSys3D.g_partA.s2[PART_XVEL];
-	var yvLimit = particleSys3D.g_partA.s2[PART_YVEL];	// find absolute values of s2[PART_YVEL]
-	if(particleSys3D.g_partA.s2[PART_YVEL] < 0.0) yvLimit = -particleSys3D.g_partA.s2[PART_YVEL];
+	var xvLimit = all_Particle_systems[current_part_sys].g_partA.s2[PART_XVEL];	// find absolute values of s2[PART_XVEL]
+	if(all_Particle_systems[current_part_sys].g_partA.s2[PART_XVEL] < 0.0) xvLimit = -all_Particle_systems[current_part_sys].g_partA.s2[PART_XVEL];
+	var yvLimit = all_Particle_systems[current_part_sys].g_partA.s2[PART_YVEL];	// find absolute values of s2[PART_YVEL]
+	if(all_Particle_systems[current_part_sys].g_partA.s2[PART_YVEL] < 0.0) yvLimit = -all_Particle_systems[current_part_sys].g_partA.s2[PART_YVEL];
 	
 	document.getElementById('KeyControls').innerHTML = 
    			'<b>Solver = </b>' + solvTypeTxt + 
    			'<b>Bounce = </b>' + bounceTypeTxt +
    			'<b>Fountain =</b>' + fountainText +
-   			'<b>drag = </b>' + particleSys3D.g_partA.drag.toFixed(5) + 
-   			', <b>grav = </b>' + particleSys3D.g_partA.grav.toFixed(5) +
+   			'<b>drag = </b>' + all_Particle_systems[current_part_sys].g_partA.drag.toFixed(5) + 
+   			', <b>grav = </b>' + all_Particle_systems[current_part_sys].g_partA.grav.toFixed(5) +
    			' m/s^2; <b>yVel = +/-</b> ' + yvLimit.toFixed(5) + 
    			' m/s; <b>xVel = +/-</b> ' + xvLimit.toFixed(5) + 
    			' m/s;<br><b>timeStep = </b> 1/' + recipTime.toFixed(3) + ' sec' +
@@ -738,13 +779,13 @@ function printControls() {
 
 function onPlusButton() {
 //==============================================================================
-	particleSys3D.g_partA.INIT_VEL *= 1.2;		// grow
-	console.log('Initial velocity: '+particleSys3D.g_partA.INIT_VEL);
+	all_Particle_systems[current_part_sys].g_partA.INIT_VEL *= 1.2;		// grow
+	console.log('Initial velocity: '+all_Particle_systems[current_part_sys].g_partA.INIT_VEL);
 }
 
 function onMinusButton() {
 //==============================================================================
-	particleSys3D.g_partA.INIT_VEL /= 1.2;		// shrink
-	console.log('Initial velocity: '+particleSys3D.g_partA.INIT_VEL);
+	all_Particle_systems[current_part_sys].g_partA.INIT_VEL /= 1.2;		// shrink
+	console.log('Initial velocity: '+all_Particle_systems[current_part_sys].g_partA.INIT_VEL);
 }
 
