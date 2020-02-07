@@ -203,6 +203,7 @@ PartSys.prototype.initBouncy2D = function(count, shader) {
   this.s2 =    new Float32Array(this.partCount * PART_MAXVAR);
   this.s1dot = new Float32Array(this.partCount * PART_MAXVAR);  
         // NOTE: Float32Array objects are zero-filled by default.
+    this.springdraw = false;
 
   // Create & init all force-causing objects------------------------------------
   var fTmp = new CForcer();       // create a force-causing object, and
@@ -372,6 +373,7 @@ PartSys.prototype.initBouncy3D = function(count, shader) {
     this.s2 =    new Float32Array(this.partCount * PART_MAXVAR);
     this.s1dot = new Float32Array(this.partCount * PART_MAXVAR);
 
+    this.showSprings = false;
         // NOTE: Float32Array objects are zero-filled by default.
 
   // Create & init all force-causing objects------------------------------------
@@ -586,6 +588,8 @@ PartSys.prototype.initFireReeves = function(count, shader) {
     this.s1dot = new Float32Array(this.partCount * PART_MAXVAR);
 
     // NOTE: Float32Array objects are zero-filled by default.
+
+    this.showSprings = false;
 
     // Create & init all force-causing objects------------------------------------
     var fTmp = new CForcer();       // create a force-causing object, and
@@ -803,6 +807,7 @@ PartSys.prototype.initTornado = function(count) {
 //==============================================================================
   console.log('PartSys.initTornado() stub not finished!');
 }
+
 PartSys.prototype.initFlocking = function(count) { 
 //==============================================================================
   console.log('PartSys.initFlocking() stub not finished!');
@@ -817,7 +822,7 @@ PartSys.prototype.initSpringPair = function(shader) {
     this.s1dot = new Float32Array(this.partCount * PART_MAXVAR);
 
     // NOTE: Float32Array objects are zero-filled by default.
-
+    this.showSprings = true;
     // Create & init all force-causing objects------------------------------------
     var fTmp = new CForcer();       // create a force-causing object, and
     // earth gravity for all particles:
@@ -888,13 +893,6 @@ PartSys.prototype.initSpringPair = function(shader) {
     this.grav = 9.832;// gravity's acceleration(meter/sec^2); adjust by g/G keys.
     // on Earth surface, value is 9.832 meters/sec^2.
     this.resti = 1.0; // units-free 'Coefficient of Restitution' for 
-    // inelastic collisions.  Sets the fraction of momentum 
-    // (0.0 <= resti < 1.0) that remains after a ball 
-    // 'bounces' on a wall or floor, as computed using 
-    // velocity perpendicular to the surface. 
-    // (Recall: momentum==mass*velocity.  If ball mass does 
-    // not change, and the ball bounces off the x==0 wall,
-    // its x velocity xvel will change to -xvel * resti ).
 
     //--------------------------init Particle System Controls:
     this.runMode = 3;// Master Control: 0=reset; 1= pause; 2=step; 3=run
@@ -1034,8 +1032,8 @@ PartSys.prototype.initSpringPair = function(shader) {
     gl.uniform1i(this.u_runModeID, this.runMode);
     gl.uniformMatrix4fv(this.uLoc_ModelMatrix, false, this.ModelMatrix.elements);
     gl.uniform1f(this.uLoc_size, this.size);
-
 }
+
 PartSys.prototype.initSpringRope = function(count) { 
 //==============================================================================
   console.log('PartSys.initSpringRope() stub not finished!');
@@ -1246,18 +1244,19 @@ PartSys.prototype.render = function(s) {
                 this.partCount);    // draw this many vertices.
 }
 
-PartSys.prototype.switchToMe = function() {
+PartSys.prototype.switchToMe = function () {
     gl.useProgram(this.shader);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vboID);
 
     gl.vertexAttribPointer(this.a_PositionID, 4, gl.FLOAT, false, PART_MAXVAR * this.FSIZE, PART_XPOS * this.FSIZE);
     gl.enableVertexAttribArray(this.a_PositionID);
-    
+
     gl.vertexAttribPointer(this.a_SizeID, 1, gl.FLOAT, false, PART_MAXVAR * this.FSIZE, PART_DIAM * this.FSIZE);
     gl.enableVertexAttribArray(this.a_SizeID);
 
     gl.vertexAttribPointer(this.a_ColorID, 3, gl.FLOAT, false, PART_MAXVAR * this.FSIZE, PART_R * this.FSIZE);
     gl.enableVertexAttribArray(this.a_ColorID);
+
 }
 
 PartSys.prototype.isReady = function() {
@@ -1273,7 +1272,7 @@ PartSys.prototype.isReady = function() {
               '.isReady() false: vbo at this.vboLoc not in use!');
     isOK = false;
   }
-  return isOK;
+    return isOK;
 }
 
 PartSys.prototype.render3D = function(s) {
@@ -1288,7 +1287,6 @@ PartSys.prototype.render3D = function(s) {
       var distance = this.calculateDistance(this.s2[j + PART_XPOS], this.s2[j + PART_YPOS], this.s2[j + PART_ZPOS])
       var size = this.s2[j + PART_SIZE] * 10 / distance;   
       this.s2[j + PART_DIAM] = size;
-      //this.particleColor = new Vector4([this.s2[j + PART_R], this.s2[j + PART_G], this.s2[j + PART_B], 1.0]);
    } 
 
 
@@ -1300,10 +1298,10 @@ PartSys.prototype.render3D = function(s) {
     this.ModelMatrix = popMatrix();
 
 
-  gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.s1);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.s1);
     gl.uniformMatrix4fv(this.uLoc_ModelMatrix, false, this.ModelMatrix.elements);
-  gl.uniform1i(this.u_runModeID, this.runMode);
-  gl.drawArrays(gl.POINTS, 0, this.partCount);
+    gl.uniform1i(this.u_runModeID, this.runMode);
+    gl.drawArrays(gl.POINTS, 0, this.partCount);
 }
 
  PartSys.prototype.solver = function() {

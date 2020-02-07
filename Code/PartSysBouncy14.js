@@ -106,6 +106,7 @@ var all_Particle_systems = [];
 var current_part_sys = 0;
 groundPlane = new groundVBO();
 cube = new drawCube();
+springs = new drawSprings();
 
 particleSys3D = new particle3D();
 all_Particle_systems.push(particleSys3D);
@@ -183,9 +184,12 @@ function main() {
   
     groundPlane.init();
     cube.init();
-    particleSys3D.init(200);
+    particleSys3D.init(20);
     particleSysFire.init(2000);
+
     particleSysSpringPair.init();
+
+    springs.init(particleSysSpringPair.g_partA);
 
    vpAspect = g_canvas.width /     // On-screen aspect ratio for
              g_canvas.height ;  // this camera: width/height.
@@ -272,6 +276,12 @@ function drawAll() {
     cube.adjust();
     cube.render();
 
+    if (all_Particle_systems[current_part_sys].g_partA.showSprings) {
+        springs.switchToMe();
+        springs.adjust();
+        springs.render();
+    }
+
     if (all_Particle_systems[current_part_sys].g_partA.runMode > 1) {					// 0=reset; 1= pause; 2=step; 3=run
         // YES! advance particle system(s) by 1 timestep.
         if (all_Particle_systems[current_part_sys].g_partA.runMode == 2) { // (if runMode==2, do just one step & pause)
@@ -313,8 +323,14 @@ function drawAll() {
         // Other Objects in Environment
         groundPlane.switchToMe();
         groundPlane.render();
+
         cube.switchToMe();
         cube.render();
+
+        if (all_Particle_systems[current_part_sys].g_partA.showSprings) {
+            springs.switchToMe();
+            springs.render();
+        }
 
         switch (all_Particle_systems[current_part_sys].g_partA.particleSystemType) {
             case BOUNCY_BALL:
@@ -325,6 +341,8 @@ function drawAll() {
                 break;
             case SPRING_PAIR:
                 particleSysSpringPair.render();
+                springs.switchToMe();
+                springs.render();
                 break;
             default:
                 console.log("Invalid Particle System");
