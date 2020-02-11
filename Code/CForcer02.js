@@ -31,8 +31,9 @@ const F_SPRING    = 7;      // ties together 2 particles; distance sets force
 const F_SPRINGSET = 8;      // a big collection of identical springs; lets you
                             // make cloth & rubbery shapes as one force-making
                             // object, instead of many many F_SPRING objects.
-const F_CHARGE    = 9;      // attract/repel by charge and inverse distance.
-const F_MAXKINDS  =10;      // 'max' is always the LAST name in our list;
+const F_CHARGE = 9;      // attract/repel by charge and inverse distance.
+const F_SPIRAL = 10;
+const F_MAXKINDS  =11;      // 'max' is always the LAST name in our list;
                             // gives the total number of choices for forces.
 
 /* NOTE THAT different forceType values (e.g. gravity vs spring) will need 
@@ -77,15 +78,17 @@ function CForcer() {
                             // during each timestep, drag of 0.15 multiplies
                             // s1 velocity by (1-0.15)==0.85)
     //F_WIND Variables..........................................................
-    this.windDirection = new Vector4([0, 0, 0, 1]);
+    this.windDirection = new Vector3([0, 0, 0]);
 
-    this.windPosition = new Vector4([0, 0, 0, 1]);
+    this.windPosition = new Vector3([0, 0, 0]);
 
     this.windForce = 0;
+    this.windZoneRadius = 1.0;
     // F_BUBBLE Bubble-force variables:.........................................
-  this.bub_radius = 1.0;                   // bubble radius
-  this.bub_ctr = new Vector4(0,0,0,1);     // bubble's center point position
-  this.bub_force = 1.0;      // inward-force's strength when outside the bubble
+    this.bub_radius = 1.0;                   // bubble radius
+    this.bub_ctr = new Vector4(0,0,0,1);     // bubble's center point position
+    this.bub_force = 1.0;      // inward-force's strength when outside the bubble
+    this.bub_force_applicable_distance = 1.0;
 
     // F_SPRING Single Spring variables;........................................
   this.e1 = 0;               // Spring endpoints connect particle # e1 to # e2
@@ -96,6 +99,11 @@ function CForcer() {
                             // how fast the spring length is changing, and
                             // applied along the direction of the spring.
   this.K_restLength;         // the zero-force length of this spring.
+
+    //F_SPRIAL variables........................................................
+    this.spiral_centre = new Vector3([0.0, 0.0, 0.0]);
+    this.sprialForce = 0;
+    this.spiral_distance_effect_zone = 1.0;
 }
 
 CForcer.prototype.printMe = function(opt_src) {

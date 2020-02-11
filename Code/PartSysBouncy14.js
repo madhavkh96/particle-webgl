@@ -117,6 +117,9 @@ all_Particle_systems.push(particleSysFire);
 particleSysSpringPair = new particleSpringPair();
 all_Particle_systems.push(particleSysSpringPair);
 
+particleSysTornado = new particleTornado();
+all_Particle_systems.push(particleSysTornado);
+
 function main() {
 //==============================================================================
   // Retrieve <canvas> element where we will draw using WebGL
@@ -184,8 +187,10 @@ function main() {
   
     groundPlane.init();
     cube.init();
-    particleSys3D.init(20);
-    particleSysFire.init(2000);
+
+    particleSys3D.init(2);
+    particleSysFire.init(2);
+    particleSysTornado.init(15000);
 
     particleSysSpringPair.init();
 
@@ -194,7 +199,7 @@ function main() {
    vpAspect = g_canvas.width /     // On-screen aspect ratio for
              g_canvas.height ;  // this camera: width/height.
   
-  printControls(); 	// Display (initial) particle system values as text on webpage
+  //printControls(); 	// Display (initial) particle system values as text on webpage
 	
   // Quick tutorial on synchronous, real-time animation in JavaScript/HTML-5: 
   //  	http://creativejs.com/resources/requestanimationframe/
@@ -312,6 +317,9 @@ function drawAll() {
             case SPRING_PAIR:
                 particleSysSpringPair.draw();
                 break;
+            case TORNADO:
+                particleSysTornado.draw();
+                break;
             default:
                 console.log("Invalid Particle System");
         }
@@ -344,10 +352,13 @@ function drawAll() {
                 springs.switchToMe();
                 springs.render();
                 break;
+            case TORNADO:
+                particleSysTornado.render();
+                break;
             default:
                 console.log("Invalid Particle System");
         }
-        printControls();		// Display particle-system status on-screen. 
+        //printControls();		// Display particle-system status on-screen. 
         // Report mouse-drag totals since last re-draw:
         document.getElementById('MouseResult0').innerHTML =
             'Mouse Drag totals (CVV coords):\t' + xMdragTot.toFixed(g_digits) +
@@ -380,9 +391,9 @@ function myMouseDown(ev) {
 	isDrag = true;											// set our mouse-dragging flag
 	xMclik = x;													// record where mouse-dragging began
 	yMclik = y;
-		document.getElementById('MouseResult1').innerHTML = 
-	'myMouseDown() at CVV coords x,y = '+x.toFixed(g_digits)+
-	                                ', '+y.toFixed(g_digits)+'<br>';
+	//	document.getElementById('MouseResult1').innerHTML = 
+	//'myMouseDown() at CVV coords x,y = '+x.toFixed(g_digits)+
+	//                                ', '+y.toFixed(g_digits)+'<br>';
 };
 
 function myMouseMove(ev) {
@@ -444,8 +455,8 @@ function myMouseUp(ev) {
 //	console.log('myMouseUp: xMdragTot,yMdragTot =',xMdragTot.toFixed(g_digits),',\t', 
 //	                                               yMdragTot.toFixed(g_digits));
 	// Put it on our webpage too...
-	document.getElementById('MouseResult1').innerHTML = 
-	'myMouseUp() at CVV coords x,y = '+x+', '+y+'<br>';
+	//document.getElementById('MouseResult1').innerHTML = 
+	//'myMouseUp() at CVV coords x,y = '+x+', '+y+'<br>';
 };
 
 function myMouseClick(ev) {
@@ -521,8 +532,8 @@ function rotationOnCamera(sign, isVerticalAxis) {
   {
     x_lookAt = x_Coordinate + Math.cos(g_rotAngle * 0.1 * sign);
     y_lookAt = y_Coordinate + Math.sin(g_rotAngle * 0.1 * sign);
-    z_lookAt = z_lookAt;
-  }
+    //z_lookAt = z_lookAt;
+  } 
 
   eyePosVector = new Vector3([x_Coordinate, y_Coordinate, z_Coordinate]);
   lookAtVector = new Vector3([x_lookAt, y_lookAt, z_lookAt]);
@@ -549,12 +560,12 @@ function myKeyDown(kev) {
               "\n--kev.altKey:",  kev.altKey,   "\t--kev.metaKey:", kev.metaKey);
 */
   // On webpage, report EVERYTING about this key-down event:              
-  document.getElementById('KeyDown').innerHTML = ''; // clear old result
-  document.getElementById('KeyMod').innerHTML = ''; 
-  document.getElementById('KeyMod' ).innerHTML = 
-        "   --kev.code:"+kev.code   +"      --kev.key:"+kev.key+
-    "<br>--kev.ctrlKey:"+kev.ctrlKey+" --kev.shiftKey:"+kev.shiftKey+
-    "<br> --kev.altKey:"+kev.altKey +"  --kev.metaKey:"+kev.metaKey;  
+  //document.getElementById('KeyDown').innerHTML = ''; // clear old result
+  //document.getElementById('KeyMod').innerHTML = ''; 
+  //document.getElementById('KeyMod' ).innerHTML = 
+  //      "   --kev.code:"+kev.code   +"      --kev.key:"+kev.key+
+  //  "<br>--kev.ctrlKey:"+kev.ctrlKey+" --kev.shiftKey:"+kev.shiftKey+
+  //  "<br> --kev.altKey:"+kev.altKey +"  --kev.metaKey:"+kev.metaKey;  
 
   // RESET our g_timeStep min/max recorder on every key-down event:
   g_timeStepMin = g_timeStep;
@@ -636,9 +647,9 @@ function myKeyDown(kev) {
         all_Particle_systems[current_part_sys].g_partA.drag *= 1.0 / 0.995;
         if(all_Particle_systems[current_part_sys].g_partA.drag > 1.0) all_Particle_systems[current_part_sys].g_partA.drag = 1.0;  // don't let drag ADD energy!
         }
-		document.getElementById('KeyDown').innerHTML =  
-		'myKeyDown() d/D key: grow/shrink drag.';	 // print on webpage,
-	  console.log("d/D: grow/shrink drag:", g_partA.drag); // print on console,
+		//document.getElementById('KeyDown').innerHTML =  
+		//'myKeyDown() d/D key: grow/shrink drag.';	 // print on webpage,
+	 // console.log("d/D: grow/shrink drag:", g_partA.drag); // print on console,
       break;
     case "KeyF":    // 'f' or 'F' to toggle particle fountain on/off
           //particleSys3D.g_partA.isFountain += 1;
@@ -646,31 +657,31 @@ function myKeyDown(kev) {
           //    particleSys3D.g_partA.current_particle_system = 0;
           current_part_sys += 1;
           if (current_part_sys >= all_Particle_systems.length) current_part_sys = 0;
-          document.getElementById('KeyDown').innerHTML =  
-              "myKeyDown() f/F key: toggle age constraint (fountain).";	// print on webpage,
-          console.log("F: toggle age constraint (fountain)."); // print on console,
+          //document.getElementById('KeyDown').innerHTML =  
+          //    "myKeyDown() f/F key: toggle age constraint (fountain).";	// print on webpage,
+          //console.log("F: toggle age constraint (fountain)."); // print on console,
 
       break;
     case "KeyG":    // 'g' to REDUCE gravity; 'G' to increase.
       if(kev.shiftKey==false) 		particleSys3D.g_partA.grav *= 0.99;		// shrink 1%
       else                        all_Particle_systems[current_part_sys].g_partA.grav *= 1.0/0.98; // grow 2%
-	  document.getElementById('KeyDown').innerHTML =  
-	  'myKeyDown() g/G key: shrink/grow gravity.';	 			// print on webpage,
-	  console.log("g/G: shrink/grow gravity:", all_Particle_systems[current_part_sys].g_partA.grav); 	// print on console,
+	  //document.getElementById('KeyDown').innerHTML =  
+	  //'myKeyDown() g/G key: shrink/grow gravity.';	 			// print on webpage,
+	  //console.log("g/G: shrink/grow gravity:", all_Particle_systems[current_part_sys].g_partA.grav); 	// print on console,
       break;
     case "KeyM":    // 'm' to REDUCE mass; 'M' to increase.
       if(kev.shiftKey==false)     all_Particle_systems[current_part_sys].g_partA.mass *= 0.98;   // shrink 2%
       else                        all_Particle_systems[current_part_sys].g_partA.mass *= 1.0/0.98; // grow 2%  
-	  document.getElementById('KeyDown').innerHTML =  
-	  'myKeyDown() m/M key: shrink/grow mass.';	 				      // print on webpage,
-	  console.log("m/M: shrink/grow mass:", all_Particle_systems[current_part_sys].g_partA.mass); 		// print on console,
+	  //document.getElementById('KeyDown').innerHTML =  
+	  //'myKeyDown() m/M key: shrink/grow mass.';	 				      // print on webpage,
+	  //console.log("m/M: shrink/grow mass:", all_Particle_systems[current_part_sys].g_partA.mass); 		// print on console,
       break;
 	case "KeyP":
 	  if(all_Particle_systems[current_part_sys].g_partA.runMode == 3) all_Particle_systems[current_part_sys].g_partA.runMode = 1;		// if running, pause
 						  else all_Particle_systems[current_part_sys].g_partA.runMode = 3;		          // if paused, run.
-	  document.getElementById('KeyDown').innerHTML =  
-			  'myKeyDown() p/P key: toggle Pause/unPause!';    // print on webpage
-	  console.log("p/P key: toggle Pause/unPause!");   			// print on console,
+	  //document.getElementById('KeyDown').innerHTML =  
+			//  'myKeyDown() p/P key: toggle Pause/unPause!';    // print on webpage
+	  //console.log("p/P key: toggle Pause/unPause!");   			// print on console,
 			break;
     case "KeyR":    // r/R for RESET: 
       if(kev.shiftKey==false) {   // 'r' key: SOFT reset; boost velocity only
@@ -772,44 +783,44 @@ function myKeyUp(kev) {
 
 }
 
-function printControls() {
-//==============================================================================
-// Print current state of the particle system on the webpage:
-	var recipTime = 1000.0 / g_timeStep;			// to report fractional seconds
-	var recipMin  = 1000.0 / g_timeStepMin;
-	var recipMax  = 1000.0 / g_timeStepMax; 
-	var solvTypeTxt;												// convert solver number to text:
-	if(all_Particle_systems[current_part_sys].g_partA.solvType==0) solvTypeTxt = 'Explicit--(unstable!)<br>';
-	                  else  solvTypeTxt = 'Implicit--(stable)<br>'; 
-	var bounceTypeTxt;											// convert bounce number to text
-	if(all_Particle_systems[current_part_sys].g_partA.bounceType==0) bounceTypeTxt = 'Velocity Reverse(no rest)<br>';
-	                     else bounceTypeTxt = 'Impulsive (will rest)<br>';
-	var fountainText;
-	if(all_Particle_systems[current_part_sys].g_partA.isFountain==0) fountainText = 'OFF: ageless particles.<br>';
-	else                      fountainText = 'ON: re-cycle old particles.<br>';
-	var xvLimit = all_Particle_systems[current_part_sys].g_partA.s2[PART_XVEL];	// find absolute values of s2[PART_XVEL]
-	if(all_Particle_systems[current_part_sys].g_partA.s2[PART_XVEL] < 0.0) xvLimit = -all_Particle_systems[current_part_sys].g_partA.s2[PART_XVEL];
-	var yvLimit = all_Particle_systems[current_part_sys].g_partA.s2[PART_YVEL];	// find absolute values of s2[PART_YVEL]
-	if(all_Particle_systems[current_part_sys].g_partA.s2[PART_YVEL] < 0.0) yvLimit = -all_Particle_systems[current_part_sys].g_partA.s2[PART_YVEL];
+//function printControls() {
+////==============================================================================
+//// Print current state of the particle system on the webpage:
+//	var recipTime = 1000.0 / g_timeStep;			// to report fractional seconds
+//	var recipMin  = 1000.0 / g_timeStepMin;
+//	var recipMax  = 1000.0 / g_timeStepMax; 
+//	var solvTypeTxt;												// convert solver number to text:
+//	if(all_Particle_systems[current_part_sys].g_partA.solvType==0) solvTypeTxt = 'Explicit--(unstable!)<br>';
+//	                  else  solvTypeTxt = 'Implicit--(stable)<br>'; 
+//	var bounceTypeTxt;											// convert bounce number to text
+//	if(all_Particle_systems[current_part_sys].g_partA.bounceType==0) bounceTypeTxt = 'Velocity Reverse(no rest)<br>';
+//	                     else bounceTypeTxt = 'Impulsive (will rest)<br>';
+//	var fountainText;
+//	if(all_Particle_systems[current_part_sys].g_partA.isFountain==0) fountainText = 'OFF: ageless particles.<br>';
+//	else                      fountainText = 'ON: re-cycle old particles.<br>';
+//	var xvLimit = all_Particle_systems[current_part_sys].g_partA.s2[PART_XVEL];	// find absolute values of s2[PART_XVEL]
+//	if(all_Particle_systems[current_part_sys].g_partA.s2[PART_XVEL] < 0.0) xvLimit = -all_Particle_systems[current_part_sys].g_partA.s2[PART_XVEL];
+//	var yvLimit = all_Particle_systems[current_part_sys].g_partA.s2[PART_YVEL];	// find absolute values of s2[PART_YVEL]
+//	if(all_Particle_systems[current_part_sys].g_partA.s2[PART_YVEL] < 0.0) yvLimit = -all_Particle_systems[current_part_sys].g_partA.s2[PART_YVEL];
 	
-	document.getElementById('KeyControls').innerHTML = 
-   			'<b>Solver = </b>' + solvTypeTxt + 
-   			'<b>Bounce = </b>' + bounceTypeTxt +
-   			'<b>Fountain =</b>' + fountainText +
-   			'<b>drag = </b>' + all_Particle_systems[current_part_sys].g_partA.drag.toFixed(5) + 
-   			', <b>grav = </b>' + all_Particle_systems[current_part_sys].g_partA.grav.toFixed(5) +
-   			' m/s^2; <b>yVel = +/-</b> ' + yvLimit.toFixed(5) + 
-   			' m/s; <b>xVel = +/-</b> ' + xvLimit.toFixed(5) + 
-   			' m/s;<br><b>timeStep = </b> 1/' + recipTime.toFixed(3) + ' sec' +
-   			                ' <b>min:</b> 1/' + recipMin.toFixed(3)  + ' sec' + 
-   			                ' <b>max:</b> 1/' + recipMax.toFixed(3)  + ' sec<br>';
-   			' <b>stepCount: </b>' + g_stepCount.toFixed(3) ;
-}
+//	document.getElementById('KeyControls').innerHTML = 
+//   			'<b>Solver = </b>' + solvTypeTxt + 
+//   			'<b>Bounce = </b>' + bounceTypeTxt +
+//   			'<b>Fountain =</b>' + fountainText +
+//   			'<b>drag = </b>' + all_Particle_systems[current_part_sys].g_partA.drag.toFixed(5) + 
+//   			', <b>grav = </b>' + all_Particle_systems[current_part_sys].g_partA.grav.toFixed(5) +
+//   			' m/s^2; <b>yVel = +/-</b> ' + yvLimit.toFixed(5) + 
+//   			' m/s; <b>xVel = +/-</b> ' + xvLimit.toFixed(5) + 
+//   			' m/s;<br><b>timeStep = </b> 1/' + recipTime.toFixed(3) + ' sec' +
+//   			                ' <b>min:</b> 1/' + recipMin.toFixed(3)  + ' sec' + 
+//   			                ' <b>max:</b> 1/' + recipMax.toFixed(3)  + ' sec<br>';
+//   			' <b>stepCount: </b>' + g_stepCount.toFixed(3) ;
+//}
 
 
 function onPlusButton() {
 //==============================================================================
-	all_Particle_systems[current_part_sys].g_partA.INIT_VEL *= 1.2;		// grow
+	all_Particle_systems[current_part_sys].g_partA.INIT_VEL *= 1.2;		// growfPRINT
 	console.log('Initial velocity: '+all_Particle_systems[current_part_sys].g_partA.INIT_VEL);
 }
 
