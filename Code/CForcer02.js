@@ -76,7 +76,12 @@ function CForcer() {
                             // (in Euler solver, which assumes constant force
                             // during each timestep, drag of 0.15 multiplies
                             // s1 velocity by (1-0.15)==0.85)
+    //F_WIND Variables..........................................................
+    this.windDirection = new Vector4([0, 0, 0, 1]);
 
+    this.windPosition = new Vector4([0, 0, 0, 1]);
+
+    this.windForce = 0;
     // F_BUBBLE Bubble-force variables:.........................................
   this.bub_radius = 1.0;                   // bubble radius
   this.bub_ctr = new Vector4(0,0,0,1);     // bubble's center point position
