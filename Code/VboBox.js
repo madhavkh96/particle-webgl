@@ -674,6 +674,10 @@ particle3D.prototype.debug = function () {
     this.g_partA.printPosition(this.g_partA.s1);
 }
 
+particle3D.prototype.update = function () {
+    this.init(bouncyBallParticlesCount);
+}
+
 //==============================================================================
 //==============================================================================
 
@@ -753,6 +757,10 @@ particleFire.prototype.render = function () {
 
 particleFire.prototype.debug = function () {
     this.g_partA.printPosition(this.g_partA.s1);
+}
+
+particleFire.prototype.update = function () {
+    this.g_partA.reload();
 }
 
 //==============================================================================
@@ -836,6 +844,10 @@ particleSpringPair.prototype.debug = function () {
     this.g_partA.printPosition(this.g_partA.s1);
 }
 
+particleSpringPair.prototype.update = function () {
+    this.g_partA.reload();
+}
+
 //==============================================================================
 //==============================================================================
 
@@ -878,17 +890,7 @@ drawSprings.prototype.init = function (particleSystem) {
 
     this.particleSystem = particleSystem;
     var floatPerVertex = 7;
-    this.points = new Float32Array(this.particleSystem.partCount * floatPerVertex);
-
-    //for (var i = 0, j = 0; i < this.particleSystem.partCount; i++ , j += floatPerVertex) {
-    //    this.points[j + 0] = this.particleSystem.s1[j + PART_XPOS];
-    //    this.points[j + 1] = this.particleSystem.s1[j + PART_YPOS];
-    //    this.points[j + 2] = this.particleSystem.s1[j + PART_ZPOS];
-    //    this.points[j + 3] = this.particleSystem.s1[j + PART_WPOS];
-    //    this.points[j + 4] = 1.0;
-    //    this.points[j + 5] = 1.0;
-    //    this.points[j + 6] = 1.0;
-    //}
+    this.points = new Float32Array(sum_factorialize(this.particleSystem.partCount) * floatPerVertex - floatPerVertex);
 
     this.vboContents = this.points;
     this.vboVerts = this.points.length / floatPerVertex;
@@ -944,16 +946,19 @@ drawSprings.prototype.init = function (particleSystem) {
 drawSprings.prototype.switchToMe = function () {
 
     gl.useProgram(this.shaderLoc);
-
-    for (var i = 0, j = 0; i < this.particleSystem.partCount; i++ , j += 7) {
-        this.points[j + 0] = this.particleSystem.s1[(i * PART_MAXVAR) + PART_XPOS];
-        this.points[j + 1] = this.particleSystem.s1[(i * PART_MAXVAR) + PART_YPOS];
-        this.points[j + 2] = this.particleSystem.s1[(i * PART_MAXVAR) + PART_ZPOS];
-        this.points[j + 3] = 1.0;
-        this.points[j + 4] = 1.0;
-        this.points[j + 5] = 1.0;
-        this.points[j + 6] = 1.0;
+    var j = 0;
+    for (var z = 0; z < this.particleSystem.partCount; z++) {
+        for (var i = z; i < this.particleSystem.partCount; i++ , j += 7) {
+            this.points[j + 0] = this.particleSystem.s1[(i * PART_MAXVAR) + PART_XPOS];
+            this.points[j + 1] = this.particleSystem.s1[(i * PART_MAXVAR) + PART_YPOS];
+            this.points[j + 2] = this.particleSystem.s1[(i * PART_MAXVAR) + PART_ZPOS];
+            this.points[j + 3] = 1.0;
+            this.points[j + 4] = 1.0;
+            this.points[j + 5] = 1.0;
+            this.points[j + 6] = 1.0;
+        }
     }
+
 
     gl.bindBuffer(gl.ARRAY_BUFFER,          // GLenum 'target' for this GPU buffer 
         this.vboLoc);         // the ID# the GPU uses for our VBO.
@@ -1118,4 +1123,102 @@ particleTornado.prototype.render = function () {
 
 particleTornado.prototype.debug = function () {
     this.g_partA.printPosition(this.g_partA.s1);
+}
+
+particleTornado.prototype.update = function () {
+    this.g_partA.reload();
+}
+//==============================================================================
+//==============================================================================
+
+function particleSpringSolid() {
+    //=============================================================================
+    //=============================================================================
+
+    this.VSHADER_SOURCE_PARTICLE =
+        ' precision mediump float;                 \n' + // req'd in OpenGL ES if we use 'float'
+        ' uniform    int u_runMode;                \n' + // particle system state: 
+        ' attribute float a_Size;                  \n' +
+        ' attribute vec4 a_Position;               \n' +
+        ' attribute vec3 a_Color;                  \n' +
+        ' uniform   mat4 u_ModelMat;               \n' +
+        ' varying   vec4 v_Color;                  \n' +
+        ' void main() {                            \n' +
+        '   gl_PointSize = a_Size;                 \n' +// TRY MAKING THIS LARGER...
+        '   gl_Position = u_ModelMat * a_Position; \n' +
+        '   if(u_runMode == 0) {                   \n' +
+        '     v_Color = vec4(1.0, 0.0, 0.0, 1.0);  \n' +   // red: 0==reset
+        '     }                                    \n' +
+        '   else if(u_runMode == 1) {              \n' +
+        '     v_Color = vec4(1.0, 1.0, 0.0, 1.0);  \n' +  // yellow: 1==pause
+        '     }                                    \n' +
+        '   else if(u_runMode == 2) {              \n' +
+        '     v_Color = vec4(1.0, 1.0, 1.0, 1.0);  \n' +  // white: 2==step
+        '     }                                    \n' +
+        '   else {                                 \n' +
+        '     v_Color = vec4(a_Color, 1.0);        \n' +  // green: >=3 ==run
+        '     }                                    \n' +
+        ' }                                        \n';
+
+    this.FSHADER_SOURCE_PARTICLE =
+        'precision mediump float;                                 \n' +
+        'varying vec4 v_Color;                                    \n' +
+        'void main() {                                            \n' +
+        '  float dist = distance(gl_PointCoord, vec2(0.5, 0.5));  \n' +
+        '  if(dist < 0.5) {                                       \n' +
+        '   gl_FragColor = vec4((1.0-2.0*dist)*v_Color.rgb, 1.0); \n' +
+        '  } else { discard; }                                    \n' +
+        '}                                                        \n';
+
+    this.g_partA = new PartSys();
+};
+
+particleSpringSolid.prototype.init = function () {
+
+    this.shaderLoc = createProgram(gl, this.VSHADER_SOURCE_PARTICLE, this.FSHADER_SOURCE_PARTICLE);
+    if (!this.shaderLoc) {
+        console.log(this.constructor.name +
+            '.init() failed to create executable Shaders on the GPU. Bye!');
+        return;
+    }
+    this.g_partA.initSpringSolid(this.shaderLoc);
+}
+
+particleSpringSolid.prototype.draw = function () {
+    // check: was WebGL context set to use our VBO & shader program?
+
+    this.g_partA.switchToMe()
+    this.g_partA.isReady();
+    this.g_partA.applyForces(this.g_partA.s1, this.g_partA.forceList);
+    this.g_partA.dotFinder(this.g_partA.s1dot, this.g_partA.s1);
+    this.g_partA.solver();
+    this.g_partA.doConstraints(this.g_partA.s1, this.g_partA.s2, this.g_partA.limitList);
+    this.g_partA.particleBehaviour();
+    this.g_partA.render3D();
+    this.g_partA.swap();
+}
+
+particleSpringSolid.prototype.render = function () {
+
+    this.g_partA.switchToMe();
+    this.g_partA.isReady();
+    this.g_partA.render3D();
+}
+
+particleSpringSolid.prototype.debug = function () {
+    this.g_partA.printPosition(this.g_partA.s1);
+}
+
+particleSpringSolid.prototype.update = function () {
+    this.init();
+}
+
+function sum_factorialize(num) {
+    if (num < 0)
+        return -1;
+    else if (num == 0)
+        return 1;
+    else {
+        return (num + sum_factorialize(num - 1));
+    }
 }

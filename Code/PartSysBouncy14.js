@@ -99,8 +99,6 @@ var y_Coordinate = 5;
 var z_Coordinate = 2;
 var eyePosVector = new Vector3([x_Coordinate, y_Coordinate, z_Coordinate]);
 
-// Our first global particle system object; contains 'state variables' s1,s2;
-//---------------------------------------------------------
 
 var all_Particle_systems = [];
 var current_part_sys = 0;
@@ -120,6 +118,28 @@ all_Particle_systems.push(particleSysSpringPair);
 particleSysTornado = new particleTornado();
 all_Particle_systems.push(particleSysTornado);
 
+tetrahedronSpringSys = new particleSpringSolid();
+all_Particle_systems.push(tetrahedronSpringSys);
+
+
+//Bouncyball variables:
+bouncyBallParticlesCount = 2;
+bouncySolver = SOLV_BACK_MIDPT;
+
+//Fire variables:
+firePariclesCount = 200;
+fireSolver = SOLV_BACK_MIDPT;
+
+//Tornado variables:
+tornadoParticlesCount = 15000;
+tornadoSolver = SOLV_BACK_MIDPT;
+
+//tetrahedron variables: 
+tet_restLength = 0.2;
+tet_springConst = 60;
+tet_dampCoeff = 3.5;
+tet_solver = SOLV_BACK_MIDPT;
+
 function main() {
 //==============================================================================
   // Retrieve <canvas> element where we will draw using WebGL
@@ -132,54 +152,15 @@ function main() {
     console.log('main() Failed to get the rendering context for WebGL');
     return;
   }  
-	// Register the Keyboard & Mouse Event-handlers------------------------------
-	// When users move, click or drag the mouse and when they press a key on the 
-	// keyboard the operating system creates a simple text-based 'event' message.
-	// Your Javascript program can respond to 'events' if you:
-	// a) tell JavaScript to 'listen' for each event that should trigger an
-	//   action within your program: call the 'addEventListener()' function, and 
-	// b) write your own 'event-handler' function for each of the user-triggered 
-	//    actions; Javascript's 'event-listener' will call your 'event-handler'
-	//		function each time it 'hears' the triggering event from users.
-	//
-  // KEYBOARD:----------------------------------------------
-  // The 'keyDown' and 'keyUp' events respond to ALL keys on the keyboard,
-  //      including shift,alt,ctrl,arrow, pgUp, pgDn,f1,f2...f12 etc. 
 	window.addEventListener("keydown", myKeyDown, false);
-	// After each 'keydown' event, call the 'myKeyDown()' function.  The 'false' 
-	// arg (default) ensures myKeyDown() call in 'bubbling', not 'capture' stage)
-	// ( https://www.w3schools.com/jsref/met_document_addeventlistener.asp )
 	window.addEventListener("keyup", myKeyUp, false);
-	// Called when user RELEASES the key.  Now rarely used...
-	// MOUSE:--------------------------------------------------
-	// Create 'event listeners' for a few vital mouse events 
-	// (others events are available too... google it!).  
 	window.addEventListener("mousedown", myMouseDown); 
-	// (After each 'mousedown' event, browser calls the myMouseDown() fcn.)
-  window.addEventListener("mousemove", myMouseMove); 
+    window.addEventListener("mousemove", myMouseMove); 
 	window.addEventListener("mouseup", myMouseUp);	
 	window.addEventListener("click", myMouseClick);				
-	window.addEventListener("dblclick", myMouseDblClick); 
-	// Note that these 'event listeners' will respond to mouse click/drag 
-	// ANYWHERE, as long as you begin in the browser window 'client area'.  
-	// You can also make 'event listeners' that respond ONLY within an HTML-5 
-	// element or division. For example, to 'listen' for 'mouse click' only
-	// within the HTML-5 canvas where we draw our WebGL results, try:
-	// g_canvasID.addEventListener("click", myCanvasClick);
-  //
-	// Wait wait wait -- these 'event listeners' just NAME the function called 
-	// when the event occurs!   How do the functionss get data about the event?
-	//  ANSWER1:----- Look it up:
-	//    All event handlers receive one unified 'event' object:
-	//	  https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent
-	//  ANSWER2:----- Investigate:
-	// 		All Javascript functions have a built-in local variable/object named 
-	//    'argument'.  It holds an array of all values (if any) found in within
-	//	   the parintheses used in the function call.
-  //     DETAILS:  https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/arguments
-	// END Keyboard & Mouse Event-Handlers---------------------------------------
-
-  gl.clearColor(0.25, 0.25, 0.25, 1);	// RGBA color for clearing WebGL framebuffer
+    window.addEventListener("dblclick", myMouseDblClick);
+    window.onload = windowLoad();
+    gl.clearColor(0.25, 0.25, 0.25, 1);	// RGBA color for clearing WebGL framebuffer
     gl.clear(gl.COLOR_BUFFER_BIT);		  // clear it once to set that color as bkgnd.
     gl.enable(gl.DEPTH_TEST);
 
@@ -189,12 +170,13 @@ function main() {
     cube.init();
 
     particleSys3D.init(2);
-    particleSysFire.init(2);
-    particleSysTornado.init(15000);
+    particleSysFire.init(200);
+    particleSysTornado.init(20000);
 
     particleSysSpringPair.init();
+    tetrahedronSpringSys.init();
 
-    springs.init(particleSysSpringPair.g_partA);
+    springs.init(tetrahedronSpringSys.g_partA);
 
    vpAspect = g_canvas.width /     // On-screen aspect ratio for
              g_canvas.height ;  // this camera: width/height.
@@ -320,8 +302,10 @@ function drawAll() {
             case TORNADO:
                 particleSysTornado.draw();
                 break;
+            case SPRING_SOLID:
+                tetrahedronSpringSys.draw();
             default:
-                console.log("Invalid Particle System");
+                console.log("Invalid Particle System", all_Particle_systems[current_part_sys].g_partA.particleSystemType);
         }
         //===========================================
         //===========================================
@@ -355,14 +339,13 @@ function drawAll() {
             case TORNADO:
                 particleSysTornado.render();
                 break;
+            case SPRING_SOLID:
+                tetrahedronSpringSys.render();
             default:
                 console.log("Invalid Particle System");
         }
         //printControls();		// Display particle-system status on-screen. 
         // Report mouse-drag totals since last re-draw:
-        document.getElementById('MouseResult0').innerHTML =
-            'Mouse Drag totals (CVV coords):\t' + xMdragTot.toFixed(g_digits) +
-            ', \t' + yMdragTot.toFixed(g_digits);
     }
 }
 
@@ -687,21 +670,26 @@ function myKeyDown(kev) {
       if(kev.shiftKey==false) {   // 'r' key: SOFT reset; boost velocity only
   		  all_Particle_systems[current_part_sys].g_partA.runMode = 3;  // RUN!
         var j=0; // array index for particle i
-        for(var i = 0; i < all_Particle_systems[current_part_sys].g_partA.partCount; i += 1, j+= PART_MAXVAR) {
-          all_Particle_systems[current_part_sys].g_partA.roundRand();  // make a spherical random var.
-    			if(  all_Particle_systems[current_part_sys].g_partA.s2[j + PART_XVEL] > 0.0) // ADD to positive velocity, and 
-    			     all_Particle_systems[current_part_sys].g_partA.s1[j + PART_XVEL] += 1.7 + 0.4*all_Particle_systems[current_part_sys].g_partA.randX*all_Particle_systems[current_part_sys].g_partA.INIT_VEL;
-    			                                      // SUBTRACT from negative velocity: 
-    			else all_Particle_systems[current_part_sys].g_partA.s1[j + PART_XVEL] -= 1.7 + 0.4*all_Particle_systems[current_part_sys].g_partA.randX*all_Particle_systems[current_part_sys].g_partA.INIT_VEL; 
+          for (var i = 0; i < all_Particle_systems[current_part_sys].g_partA.partCount; i += 1, j += PART_MAXVAR) {
+              if (all_Particle_systems[current_part_sys].g_partA.particleSystemType == SPRING_SOLID) {
+                  all_Particle_systems[current_part_sys].g_partA.s1[j + PART_YPOS] += 1.0;
+              }
+              else {
+                  all_Particle_systems[current_part_sys].g_partA.roundRand();  // make a spherical random var.
+                  if (all_Particle_systems[current_part_sys].g_partA.s2[j + PART_XVEL] > 0.0) // ADD to positive velocity, and 
+                      all_Particle_systems[current_part_sys].g_partA.s1[j + PART_XVEL] += 1.7 + 0.4 * all_Particle_systems[current_part_sys].g_partA.randX * all_Particle_systems[current_part_sys].g_partA.INIT_VEL;
+                  // SUBTRACT from negative velocity: 
+                  else all_Particle_systems[current_part_sys].g_partA.s1[j + PART_XVEL] -= 1.7 + 0.4 * all_Particle_systems[current_part_sys].g_partA.randX * all_Particle_systems[current_part_sys].g_partA.INIT_VEL;
 
-    			if(  all_Particle_systems[current_part_sys].g_partA.s2[j + PART_YVEL] > 0.0) 
-    			     all_Particle_systems[current_part_sys].g_partA.s1[j + PART_YVEL] += 1.7 + 0.4*all_Particle_systems[current_part_sys].g_partA.randY*all_Particle_systems[current_part_sys].g_partA.INIT_VEL; 
-    			else all_Particle_systems[current_part_sys].g_partA.s1[j + PART_YVEL] -= 1.7 + 0.4*all_Particle_systems[current_part_sys].g_partA.randY*all_Particle_systems[current_part_sys].g_partA.INIT_VEL;
+                  if (all_Particle_systems[current_part_sys].g_partA.s2[j + PART_YVEL] > 0.0)
+                      all_Particle_systems[current_part_sys].g_partA.s1[j + PART_YVEL] += 1.7 + 0.4 * all_Particle_systems[current_part_sys].g_partA.randY * all_Particle_systems[current_part_sys].g_partA.INIT_VEL;
+                  else all_Particle_systems[current_part_sys].g_partA.s1[j + PART_YVEL] -= 1.7 + 0.4 * all_Particle_systems[current_part_sys].g_partA.randY * all_Particle_systems[current_part_sys].g_partA.INIT_VEL;
 
-    			if(  all_Particle_systems[current_part_sys].g_partA.s2[j + PART_ZVEL] > 0.0) 
-    			     all_Particle_systems[current_part_sys].g_partA.s1[j + PART_ZVEL] += 1.7 + 0.4*all_Particle_systems[current_part_sys].g_partA.randZ*all_Particle_systems[current_part_sys].g_partA.INIT_VEL; 
-    			else all_Particle_systems[current_part_sys].g_partA.s1[j + PART_ZVEL] -= 1.7 + 0.4*all_Particle_systems[current_part_sys].g_partA.randZ*all_Particle_systems[current_part_sys].g_partA.INIT_VEL;
-    			}
+                  if (all_Particle_systems[current_part_sys].g_partA.s2[j + PART_ZVEL] > 0.0)
+                      all_Particle_systems[current_part_sys].g_partA.s1[j + PART_ZVEL] += 1.7 + 0.4 * all_Particle_systems[current_part_sys].g_partA.randZ * all_Particle_systems[current_part_sys].g_partA.INIT_VEL;
+                  else all_Particle_systems[current_part_sys].g_partA.s1[j + PART_ZVEL] -= 1.7 + 0.4 * all_Particle_systems[current_part_sys].g_partA.randZ * all_Particle_systems[current_part_sys].g_partA.INIT_VEL;
+              }
+          }
       }
       else {      // HARD reset: position AND velocity, BOTH state vectors:
   		  all_Particle_systems[current_part_sys].g_partA.runMode = 0;			// RESET!
@@ -716,51 +704,39 @@ function myKeyDown(kev) {
         			all_Particle_systems[current_part_sys].g_partA.s2[j + PART_YVEL] =  3.7 + 0.4*all_Particle_systems[current_part_sys].g_partA.randY*all_Particle_systems[current_part_sys].g_partA.INIT_VEL; // initial velocity in meters/sec.
               all_Particle_systems[current_part_sys].g_partA.s2[j + PART_ZVEL] =  3.7 + 0.4*all_Particle_systems[current_part_sys].g_partA.randZ*all_Particle_systems[current_part_sys].g_partA.INIT_VEL;
               // do state-vector s2 as well: just copy all elements of the float32array.
-              all_Particle_systems[current_part_sys].g_partA.s2.set(g_partA.s1);
+            all_Particle_systems[current_part_sys].g_partA.s2.set(all_Particle_systems[current_part_sys].g_partA.s1);
         } // end for loop
       } // end HARD reset
-	  document.getElementById('KeyDown').innerHTML =  
-	  'myKeyDown() r/R key: soft/hard Reset.';	// print on webpage,
-	  console.log("r/R: soft/hard Reset");      // print on console,
+	  //document.getElementById('KeyDown').innerHTML =  
+	  //'myKeyDown() r/R key: soft/hard Reset.';	// print on webpage,
+	  //console.log("r/R: soft/hard Reset");      // print on console,
       break;
-		case "KeyS":
-			if(all_Particle_systems[current_part_sys].g_partA.solvType == SOLV_EULER) all_Particle_systems[current_part_sys].g_partA.solvType = SOLV_OLDGOOD;  
-			else all_Particle_systems[current_part_sys].g_partA.solvType = SOLV_EULER;     
-			document.getElementById('KeyDown').innerHTML =  
-			'myKeyDown() found s/S key. Switch solvers!';       // print on webpage.
-		  console.log("s/S: Change Solver:", all_Particle_systems[current_part_sys].g_partA.solvType); // print on console.
-			break;
+      case "KeyI":
+          var solvers = new Uint8Array([SOLV_EULER, SOLV_MIDPOINT, SOLV_BACK_EULER, SOLV_BACK_MIDPT]);
+          currSolver = solvers[3];
+          if (currSolver == solvers[3]) currSolver = solvers[0];
+          else if (currSolver == solvers[0]) currSolver = solvers[1];
+
+          console.log("Current Solver =", currSolver);
+
+          all_Particle_systems[current_part_sys].g_partA.solvType = currSolver;
+          break;
+		//	if(all_Particle_systems[current_part_sys].g_partA.solvType == SOLV_EULER) all_Particle_systems[current_part_sys].g_partA.solvType = SOLV_OLDGOOD;  
+		//	else all_Particle_systems[current_part_sys].g_partA.solvType = SOLV_EULER;     
+			//document.getElementById('KeyDown').innerHTML =  
+			//'myKeyDown() found s/S key. Switch solvers!';       // print on webpage.
+		 // console.log("s/S: Change Solver:", all_Particle_systems[current_part_sys].g_partA.solvType); // print on console.
+			//break;
 		case "Space":
       all_Particle_systems[current_part_sys].g_partA.runMode = 2;
-	  document.getElementById('KeyDown').innerHTML =  
-	  'myKeyDown() found Space key. Single-step!';   // print on webpage,
-      console.log("SPACE bar: Single-step!");        // print on console.
+	  //document.getElementById('KeyDown').innerHTML =  
+	  //'myKeyDown() found Space key. Single-step!';   // print on webpage,
+   //   console.log("SPACE bar: Single-step!");        // print on console.
       break;
-		case "ArrowLeft": 	
-			// and print on webpage in the <div> element with id='Result':
-  		document.getElementById('KeyDown').innerHTML =
-  			'myKeyDown(): Arrow-Left,keyCode='+kev.keyCode;
-			console.log("Arrow-Left key(UNUSED)");
-  		break;
-		case "ArrowRight":
-  		document.getElementById('KeyDown').innerHTML =
-  			'myKeyDown(): Arrow-Right,keyCode='+kev.keyCode;
-  		console.log("Arrow-Right key(UNUSED)");
-  		break;
-		case "ArrowUp":		
-  		document.getElementById('KeyDown').innerHTML =
-  			'myKeyDown(): Arrow-Up,keyCode='+kev.keyCode;
-  		console.log("Arrow-Up key(UNUSED)");
-			break;
-		case "ArrowDown":
-  		document.getElementById('KeyDown').innerHTML =
-  			'myKeyDown(): Arrow-Down,keyCode='+kev.keyCode;
-  			console.log("Arrow-Down key(UNUSED)");
-  		break;	
     default:
-  		document.getElementById('KeyDown').innerHTML =
-  			'myKeyDown():UNUSED,keyCode='+kev.keyCode;
-  		console.log("UNUSED key:", kev.keyCode);
+  		//document.getElementById('KeyDown').innerHTML =
+  		//	'myKeyDown():UNUSED,keyCode='+kev.keyCode;
+  		//console.log("UNUSED key:", kev.keyCode);
       break;
   }
 }
@@ -781,6 +757,11 @@ function myKeyUp(kev) {
     break;
   }
 
+}
+
+function ChangeSolvers(index) {
+    var solvers = new Uint8Array([SOLV_EULER, SOLV_MIDPOINT, SOLV_ADAMS_BASH, SOLV_RUNGEKUTTA, SOLV_OLDGOOD, SOLV_BACK_EULER, SOLV_BACK_MIDPT, SOLV_BACK_ADBASH, SOLV_VERLET]);
+    all_Particle_systems[current_part_sys].g_partA.solvType = solvers[index];
 }
 
 //function printControls() {
@@ -828,5 +809,92 @@ function onMinusButton() {
 //==============================================================================
 	all_Particle_systems[current_part_sys].g_partA.INIT_VEL /= 1.2;		// shrink
 	console.log('Initial velocity: '+all_Particle_systems[current_part_sys].g_partA.INIT_VEL);
+}
+
+
+var BouncyBallsGUI = function () {
+    this.particles = bouncyBallParticlesCount;
+    this.solver = bouncySolver;
+
+    this.reload = function () {
+        bouncyBallParticlesCount = this.particles;
+        particleSys3D.update();
+        ChangeSolvers(this.solver);
+    }
+}
+
+
+var FireGUI = function () {
+    this.particles = firePariclesCount;
+    this.solver = fireSolver;
+
+    this.reload = function () {
+        firePariclesCount = this.particles;
+        particleSysFire.update();
+        ChangeSolvers(this.solver);
+    }
+}
+
+var TornadoGUI = function () {
+    this.particles = tornadoParticlesCount;
+    this.solver = tornadoSolver;
+
+    this.reload = function () {
+        tornadoParticlesCount = this.particles;
+        particleSysTornado.update();
+        ChangeSolvers(this.solver);
+    }
+}
+
+
+var TetrahedronGUI = function () {
+
+    this.solver = tet_solver;
+    this.restLength = tet_restLength;
+    this.springK = tet_springConst;
+    this.dampCoeff = tet_dampCoeff;
+  
+    this.reload = function () {
+        tet_restLength = this.restLength;
+        tet_springConst = this.springK;
+        tet_dampCoeff = this.dampCoeff;
+        tetrahedronSpringSys.update();
+        ChangeSolvers(this.solver);
+    }
+
+}
+
+function windowLoad() {
+    var bouncyFolder = new BouncyBallsGUI();
+    var fireFolder = new FireGUI();
+    var tornadoFolder = new TornadoGUI();
+    var tetrahedronFolder = new TetrahedronGUI();
+    var gui = new dat.GUI();
+
+    //Bouncy Particles Controller
+    var normalParticles = gui.addFolder('Bouncy Balls');
+    normalParticles.add(bouncyFolder, 'particles');
+    normalParticles.add(bouncyFolder, 'solver', { EULER: SOLV_EULER, MID_POINT: SOLV_MIDPOINT, BACK_EULER: SOLV_BACK_EULER, BACK_MID_POINT: SOLV_BACK_MIDPT });
+    normalParticles.add(bouncyFolder, 'reload');
+
+    var fire = gui.addFolder('Fire Particles');
+    fire.add(fireFolder, 'particles');
+    fire.add(fireFolder, 'solver', { EULER: SOLV_EULER, MID_POINT: SOLV_MIDPOINT, BACK_EULER: SOLV_BACK_EULER, BACK_MID_POINT: SOLV_BACK_MIDPT });
+    fire.add(fireFolder, 'reload');
+
+    var tornado = gui.addFolder('Tornado Particles');
+    tornado.add(tornadoFolder, 'particles');
+    tornado.add(tornadoFolder, 'solver', { EULER: SOLV_EULER, MID_POINT: SOLV_MIDPOINT, BACK_EULER: SOLV_BACK_EULER, BACK_MID_POINT: SOLV_BACK_MIDPT });
+    tornado.add(tornadoFolder, 'reload');
+
+    var springSolid = gui.addFolder('Springy Tetrahedron');
+    springSolid.add(tetrahedronFolder, 'solver', { EULER: SOLV_EULER, MID_POINT: SOLV_MIDPOINT, BACK_EULER: SOLV_BACK_EULER, BACK_MID_POINT: SOLV_BACK_MIDPT });
+    springSolid.add(tetrahedronFolder, 'restLength', 0, 1);
+    springSolid.add(tetrahedronFolder, 'springK');
+    springSolid.add(tetrahedronFolder, 'dampCoeff');
+    springSolid.add(tetrahedronFolder, 'reload');
+
+
+    normalParticles.open();
 }
 
