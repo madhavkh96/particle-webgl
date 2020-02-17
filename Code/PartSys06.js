@@ -470,7 +470,7 @@ PartSys.prototype.initBouncy3D = function(count, shader) {
   this.ModelMatrix = new Matrix4();
   this.uLoc_ModelMatrix = false;
   this.u_runModeID = false;
-  this.size = 10.0;
+  this.size = 50.0;
 
 
   gl.program = this.shader;
@@ -503,7 +503,7 @@ PartSys.prototype.initBouncy3D = function(count, shader) {
     this.s1[j + PART_AGE] = 30 + 100*Math.random();
     var distance = this.calculateDistance_camera(this.s1[j + PART_XPOS], this.s1[j + PART_YPOS], this.s1[j + PART_ZPOS])
       var size = this.size / distance;
-      this.s1[j + PART_SIZE] = this.size;
+      this.s1[j + PART_SIZE] = size;
     //----------------------------
       this.s2.set(this.s1);   // COPY contents of state-vector s1 to s2.
   }
@@ -1075,7 +1075,228 @@ PartSys.prototype.initTornado = function(count, shader) {
 
 PartSys.prototype.initFlocking = function(count, shader) { 
 //==============================================================================
-  console.log('PartSys.initFlocking() stub not finished!');
+    this.partCount = count;
+    this.s1 = new Float32Array(this.partCount * PART_MAXVAR);
+    this.s2 = new Float32Array(this.partCount * PART_MAXVAR);
+    this.s1dot = new Float32Array(this.partCount * PART_MAXVAR);
+
+    this.showSprings = false;
+    // NOTE: Float32Array objects are zero-filled by default.
+
+    // Create & init all force-causing objects------------------------------------
+    //var fTmp = new CForcer();       // create a force-causing object, and
+    //// earth gravity for all particles:
+    //fTmp.forceType = F_GRAV_E;      // set it to earth gravity, and
+    //fTmp.targFirst = 0;             // set it to affect ALL particles:
+    //fTmp.partCount = -1;            // (negative value means ALL particles)
+    //// (and IGNORE all other Cforcer members...)
+    //this.forceList.push(fTmp);      // append this 'gravity' force object to 
+    // the forceList array of force-causing objects.
+    // drag for all particles:
+    fTmp = new CForcer();           // create a NEW CForcer object 
+    // (WARNING! until we do this, fTmp refers to
+    // the same memory locations as forceList[0]!!!) 
+    fTmp.forceType = F_DRAG;        // Viscous Drag
+    fTmp.Kdrag = 0.9;               // in Euler solver, scales velocity by 0.85
+    fTmp.targFirst = 0;             // apply it to ALL particles:
+    fTmp.partCount = -1;            // (negative value means ALL particles)
+    // (and IGNORE all other Cforcer members...)
+    this.forceList.push(fTmp);      // append this 'gravity' force object to 
+    // the forceList array of force-causing objects.
+
+    //Set the current Particle System and push it
+
+    this.particleSystemType = BOIDS;
+
+    // Report:
+    console.log("PartSys.initBouncy3D() created PartSys.forceList[] array of ");
+    console.log("\t\t", this.forceList.length, "CForcer objects:");
+    for (i = 0; i < this.forceList.length; i++) {
+        console.log("CForceList[", i, "]");
+        this.forceList[i].printMe();
+    }
+
+    // Create & init all constraint-causing objects-------------------------------
+    var cTmp = new CLimit();      // creat constraint-causing object, and
+    cTmp.hitType = HIT_BOUNCE_VEL;  // set how particles 'bounce' from its surface,
+    cTmp.limitType = LIM_VOL;       // confine particles inside axis-aligned 
+    // rectangular volume that
+    cTmp.targFirst = 0;             // applies to ALL particles; starting at 0 
+    cTmp.partCount = -1;            // through all the rest of them.
+    cTmp.xMin = -5.95; cTmp.xMax = 5.95;  // box extent:  +/- 1.0 box at origin
+    cTmp.yMin = -0.95; cTmp.yMax = 5.95;
+    cTmp.zMin = -5.95; cTmp.zMax = 5.95;
+    cTmp.Kresti = 1.0;              // bouncyness: coeff. of restitution.
+    // (and IGNORE all other CLimit members...)
+    this.limitList.push(cTmp);      // append this 'box' constraint object to the
+    // 'limitList' array of constraint-causing objects.                                
+    // Report:
+    console.log("PartSys.initBouncy3D() created PartSys.limitList[] array of ");
+    console.log("\t\t", this.limitList.length, "CLimit objects.");
+
+    this.INIT_VEL = 0.15 * 60.0;   // initial velocity in meters/sec.
+    // adjust by ++Start, --Start buttons. Original value 
+    // was 0.15 meters per timestep; multiply by 60 to get
+    // meters per second.
+    this.drag = 0.9;/*0.985;*/// units-free air-drag (scales velocity); adjust by d/D keys
+    this.grav = 9.832;// gravity's acceleration(meter/sec^2); adjust by g/G keys.
+    // on Earth surface, value is 9.832 meters/sec^2.
+    this.resti = 1.0; // units-free 'Coefficient of Restitution' for 
+    // inelastic collisions.  Sets the fraction of momentum 
+    // (0.0 <= resti < 1.0) that remains after a ball 
+    // 'bounces' on a wall or floor, as computed using 
+    // velocity perpendicular to the surface. 
+    // (Recall: momentum==mass*velocity.  If ball mass does 
+    // not change, and the ball bounces off the x==0 wall,
+    // its x velocity xvel will change to -xvel * resti ).
+
+    //--------------------------init Particle System Controls:
+    this.runMode = 3;// Master Control: 0=reset; 1= pause; 2=step; 3=run
+    this.solvType = bouncySolver;// adjust by s/S keys.
+    console.log(this.solvType);
+    // SOLV_EULER (explicit, forward-time, as 
+    // found in BouncyBall03.01BAD and BouncyBall04.01badMKS)
+    // SOLV_OLDGOOD for special-case implicit solver, reverse-time, 
+    // as found in BouncyBall03.GOOD, BouncyBall04.goodMKS)
+    this.bounceType = 1;  // floor-bounce constraint type:
+    // ==0 for velocity-reversal, as in all previous versions
+    // ==1 for Chapter 3's collision resolution method, which
+    // uses an 'impulse' to cancel any velocity boost caused
+    // by falling below the floor.
+    this.shader = shader;
+    this.ModelMatrix = new Matrix4();
+    this.uLoc_ModelMatrix = false;
+    this.u_runModeID = false;
+    this.size = 50.0;
+
+
+    gl.program = this.shader;
+    gl.useProgram(this.shader);
+    //--------------------------------Create & fill VBO with state var s1 contents:
+    // INITIALIZE s1, s2:
+    //  NOTE: s1,s2 are a Float32Array objects, zero-filled by default.
+    // That's OK for most particle parameters, but these need non-zero defaults:
+
+    var j = 0;  // i==particle number; j==array index for i-th particle
+    for (var i = 0; i < this.partCount; i += 1, j += PART_MAXVAR) {
+        this.roundRand();       // set this.randX,randY,randZ to random location in 
+        // a 3D unit sphere centered at the origin.
+        //all our bouncy-balls stay within a +/- 0.9 cube centered at origin; 
+        // set random positions in a 0.1-radius ball centered at (-0.8,-0.8,-0.8)
+        this.s1[j + PART_XPOS] = -0.8 + 0.5 * this.randX;
+        this.s1[j + PART_YPOS] = -0.8 + 0.1 * this.randY;
+        this.s1[j + PART_ZPOS] = -0.8 + 0.1 * this.randZ;
+        this.s1[j + PART_WPOS] = 1.0;      // position 'w' coordinate;
+        this.roundRand(); // Now choose random initial velocities too:
+        this.s1[j + PART_XVEL] = this.INIT_VEL * (0.4 + 0.2 * this.randX);
+        this.s1[j + PART_YVEL] = this.INIT_VEL * (0.4 + 0.2 * this.randY);
+        this.s1[j + PART_ZVEL] = this.INIT_VEL * (0.4 + 0.2 * this.randZ);
+        this.s1[j + PART_MASS] = 1.0;      // mass, in kg.
+        this.s1[j + PART_DIAM] = this.size; // on-screen diameter, in pixels
+        this.s1[j + PART_RENDMODE] = 0.0;
+        this.s1[j + PART_R] = 0.2;
+        this.s1[j + PART_G] = 1.0;
+        this.s1[j + PART_B] = 0.4;
+        this.s1[j + PART_AGE] = 30 + 100 * Math.random();
+        var distance = this.calculateDistance_camera(this.s1[j + PART_XPOS], this.s1[j + PART_YPOS], this.s1[j + PART_ZPOS])
+        var size = this.size / distance;
+        this.s1[j + PART_SIZE] = size;
+
+
+        //Adding the boid force object to each boid so that each incoming boid to the boid center will be repelled away.
+
+        fTmp = new CForcer();
+
+        fTmp.forceType = F_BUBBLE;
+        fTmp.bub_ctr = new Vector4(this.s1[j + PART_XPOS], this.s1[j + PART_YPOS], this.s1[j + PART_ZPOS], 1);
+        fTmp.bub_force = -1.0;
+        fTmp.bub_force_applicable_distance = 0.1;
+        this.forceList.push(fTmp);
+
+        //----------------------------
+        this.s2.set(this.s1);   // COPY contents of state-vector s1 to s2.
+    }
+
+    this.FSIZE = this.s1.BYTES_PER_ELEMENT;  // 'float' size, in bytes.
+    // Create a vertex buffer object (VBO) in the graphics hardware: get its ID# 
+    this.vboID = gl.createBuffer();
+    if (!this.vboID) {
+        console.log('PartSys.init() Failed to create the VBO object in the GPU');
+        return -1;
+    }
+    // "Bind the new buffer object (memory in the graphics system) to target"
+    // In other words, specify the usage of one selected buffer object.
+    // What's a "Target"? it's the poorly-chosen OpenGL/WebGL name for the 
+    // intended use of this buffer's memory; so far, we have just two choices:
+    //  == "gl.ARRAY_BUFFER" meaning the buffer object holds actual values we 
+    //      need for rendering (positions, colors, normals, etc), or 
+    //  == "gl.ELEMENT_ARRAY_BUFFER" meaning the buffer object holds indices 
+    //      into a list of values we need; indices such as object #s, face #s, 
+    //      edge vertex #s.
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vboID);
+
+    // Write data from our JavaScript array to graphics systems' buffer object:
+    gl.bufferData(gl.ARRAY_BUFFER, this.s1, gl.DYNAMIC_DRAW);
+    // why 'DYNAMIC_DRAW'? Because we change VBO's content with bufferSubData() later
+
+    // ---------Set up all attributes for VBO contents:
+    //Get the ID# for the a_Position variable in the graphics hardware
+    this.a_PositionID = gl.getAttribLocation(gl.program, 'a_Position');
+    if (this.a_PositionID < 0) {
+        console.log('PartSys.init() Failed to get the storage location of a_Position');
+        return -1;
+    }
+    // Tell GLSL to fill the 'a_Position' attribute variable for each shader with
+    // values from the buffer object chosen by 'gl.bindBuffer()' command.
+    // websearch yields OpenGL version: 
+    //    http://www.opengl.org/sdk/docs/man/xhtml/glVertexAttribPointer.xml
+    gl.vertexAttribPointer(this.a_PositionID,
+        4,  // # of values in this attrib (1,2,3,4) 
+        gl.FLOAT, // data type (usually gl.FLOAT)
+        false,    // use integer normalizing? (usually false)
+        PART_MAXVAR * this.FSIZE,  // Stride: #bytes from 1st stored value to next one
+        PART_XPOS * this.FSIZE); // Offset; #bytes from start of buffer to 
+    // 1st stored attrib value we will actually use.
+    // Enable this assignment of the bound buffer to the a_Position variable:
+    gl.enableVertexAttribArray(this.a_PositionID);
+
+    this.a_SizeID = gl.getAttribLocation(gl.program, 'a_Size');
+    if (this.a_SizeID < 0) {
+        console.log('PartSys.init() Failed to get the storage location of a_Size');
+        return -1;
+    }
+
+    gl.vertexAttribPointer(this.a_SizeID, 1, gl.FLOAT, false, PART_MAXVAR * this.FSIZE, PART_DIAM * this.FSIZE);
+
+    gl.enableVertexAttribArray(this.a_SizeID);
+
+    this.a_ColorID = gl.getAttribLocation(gl.program, 'a_Color');
+    if (this.a_ColorID < 0) {
+        console.log('PartSys.init() Failed to get the storage location of a_Color');
+    }
+
+    gl.vertexAttribPointer(this.a_ColorID, 3, gl.FLOAT, false, PART_MAXVAR * this.FSIZE, PART_R * this.FSIZE);
+
+    gl.enableVertexAttribArray(this.a_ColorID);
+
+    // ---------Set up all uniforms we send to the GPU:
+    // Get graphics system storage location of each uniform our shaders use:
+    // (why? see  http://www.opengl.org/wiki/Uniform_(GLSL) )
+    this.u_runModeID = gl.getUniformLocation(gl.program, 'u_runMode');
+    if (!this.u_runModeID) {
+        console.log('PartSys.init() Failed to get u_runMode variable location');
+        return;
+    }
+
+    this.uLoc_ModelMatrix = gl.getUniformLocation(gl.program, 'u_ModelMat');
+    if (!this.uLoc_ModelMatrix) {
+        console.log('PartSys.init() Failed to get u_ModelMat variable location');
+    }
+
+    // Set the initial values of all uniforms on GPU: (runMode set by keyboard)
+    gl.uniform1i(this.u_runModeID, this.runMode);
+    gl.uniformMatrix4fv(this.uLoc_ModelMatrix, false, this.ModelMatrix.elements);
+    gl.uniform1f(this.uLoc_size, this.size);
 }
 
 PartSys.prototype.initSpringPair = function(shader) { 
@@ -1959,8 +2180,9 @@ PartSys.prototype.render3D = function(s) {
                                      0,            0,            1,);
   
     for (var i = 0, j = 0; i < this.partCount; i+=1, j += PART_MAXVAR) {
-      var distance = this.calculateDistance_camera(this.s2[j + PART_XPOS], this.s2[j + PART_YPOS], this.s2[j + PART_ZPOS])
-      var size = this.s2[j + PART_SIZE] * 20 / distance;   
+        var distance = this.calculateDistance_camera(this.s2[j + PART_XPOS], this.s2[j + PART_YPOS], this.s2[j + PART_ZPOS])
+        var size = this.range(1, this.size, this.s2[j + PART_SIZE] * 20 / distance); 
+        
       this.s2[j + PART_DIAM] = size;
    } 
 
@@ -2268,16 +2490,6 @@ PartSys.prototype.doConstraints = function(sNow, sNext, cList) {
                 curr_velocityDir = curr_velocityDir.normalize();
                 var cross_dir = curr_velocityDir.cross(downVector);
 
-                //if (cList[k].coneBoundary == 0) {
-                //    if (dist_2D > cList[k].radius) {
-                //        sNext[j + PART_XPOS] = cList[k].radius * Math.cos(sNext[j + PART_XPOS] * Math.random() * 10);
-                //        sNext[j + PART_YPOS] = sNext[j + PART_YPOS];
-                //        sNext[j + PART_ZPOS] = cList[k].radius * Math.sin(sNext[j + PART_XPOS] * Math.random() * 10);
-                //        sNext[j + PART_XVEL] = cross_dir.elements[0] * curr_mag;
-                //        sNext[j + PART_YVEL] = cross_dir.elements[1] * curr_mag;
-                //        sNext[j + PART_ZVEL] = cross_dir.elements[2] * curr_mag;
-                //    }
-                //} else {
                     if (dist_2D < cList[k].radius) {
                         sNext[j + PART_XPOS] = sNow[j + PART_XPOS];
                         sNext[j + PART_YPOS] = sNext[j + PART_YPOS];
@@ -2333,12 +2545,12 @@ PartSys.prototype.particleBehaviour = function () {
             console.log("Currently No Special Behaviour");
             break;
         case FIRE:
-              // i==particle number; j==array index for i-th particle
+            // i==particle number; j==array index for i-th particle
             for (var i = 0, j = 0; i < this.partCount; i += 1, j += PART_MAXVAR) {
                 var inv_age = 1 / this.s2[j + PART_AGE];
                 this.s2[j + PART_AGE] -= 1;     // decrement lifetime.
                 this.s2[j + PART_SIZE] *= this.s2[j + PART_AGE] * inv_age;
-                this.s2[j + PART_MASS] = this.clamp(0.01, this.s2[j + PART_MASS], this.s2[j + PART_MASS] * 0.5);  
+                this.s2[j + PART_MASS] = this.clamp(0.01, this.s2[j + PART_MASS], this.s2[j + PART_MASS] * 0.5);
 
                 this.s2[j + PART_R] *= this.clamp(0, 1, this.s2[j + PART_AGE] * inv_age);
                 this.s2[j + PART_G] *= this.clamp(0, 1, this.s2[j + PART_AGE] * inv_age);
@@ -2369,44 +2581,86 @@ PartSys.prototype.particleBehaviour = function () {
             } // for loop thru all particles
             break;
         case SPRING_PAIR:
-            console.log("No Special Behviour Programmed");
             break;
         case TORNADO:
-            //for (var i = 0, j = 0; i < this.partCount; i += 1, j += PART_MAXVAR) {
-            //    var inv_age = 1 / this.s2[j + PART_AGE];
-            //    this.s2[j + PART_AGE] -= 1;     // decrement lifetime.
-            //    this.s2[j + PART_SIZE] *= this.s2[j + PART_AGE] * inv_age;
-            //    this.s2[j + PART_MASS] = this.clamp(0.01, this.s2[j + PART_MASS], this.s2[j + PART_MASS] * 0.5);
-
-            //    this.s2[j + PART_R] *= this.clamp(0, 1, this.s2[j + PART_AGE] * inv_age);
-            //    this.s2[j + PART_G] *= this.clamp(0, 1, this.s2[j + PART_AGE] * inv_age);
-            //    this.s2[j + PART_B] *= this.clamp(0, 1, this.s2[j + PART_AGE] * inv_age);
-
-            //    if (this.s2[j + PART_AGE] <= 0) { // End of life: RESET this particle!
-            //        this.roundRand();       // set this.randX,randY,randZ to random location in 
-            //        // a 3D unit sphere centered at the origin.
-            //        // all our bouncy-balls stay within a +/- 0.9 cube centered at origin; 
-            //        // set random positions in a 0.1-radius ball centered at (-0.8,-0.8,-0.8)
-            //        this.s2[j + PART_XPOS] = -0.8 + 0.2 * this.randX;
-            //        this.s2[j + PART_YPOS] = -0.6 + 0.2 * this.randY;
-            //        this.s2[j + PART_ZPOS] = -0.7 + 0.2 * this.randZ;
-            //        this.s2[j + PART_WPOS] = 1.0;      // position 'w' coordinate;
-            //        this.roundRand(); // Now choose random initial velocities too:
-            //        this.s2[j + PART_XVEL] = this.INIT_VEL * (0.0 + 0.2 * this.randX) * 0.5;
-            //        this.s2[j + PART_YVEL] = this.INIT_VEL * (0.5 + 0.2 * this.randY) * 0.6;
-            //        this.s2[j + PART_ZVEL] = this.INIT_VEL * (0.0 + 0.2 * this.randZ) * 0.5;
-            //        this.s2[j + PART_MASS] = 1.0;      // mass, in kg.
-            //        this.s2[j + PART_DIAM] = this.size; // on-screen diameter, in pixels
-            //        this.s2[j + PART_RENDMODE] = 0.0;
-            //        this.s2[j + PART_R] = 0.9 + Math.random() * 0.1;
-            //        this.s2[j + PART_G] = 0.2 + Math.random() * 0.3;
-            //        this.s2[j + PART_B] = 0.1;
-            //        this.s2[j + PART_AGE] = 30 + 100 * Math.random() * 100;
-            //        this.s2[j + PART_SIZE] = 10;
-            //    } // if age <=0
-            //}
+            //Stub To enter some special Behabiour the Tornado might follow through it's lifecycle.
             break;
         case SPRING_SOLID:
+            break;
+        case BOIDS:
+            // Rule-1 All the boids fly towards to the centre of mass of all the boids. This is as simple as the Average position of the boids.
+            var sum_XPosn = 0;
+            var sum_YPosn = 0;
+            var sum_ZPosn = 0;
+            //----------------------------------
+
+            var sum_XVel = 0;
+            var sum_YVel = 0;
+            var sum_ZVel = 0;
+            //----------------------------------
+
+            var inv_number = 1 / this.partCount;
+            var boids_forces = [];
+
+            for (var i = 0; i < this.forceList.length; i++) {
+                if (this.forceList[i].forceType == F_BUBBLE) {
+                    boids_forces.push(this.forceList[i]);
+                }
+            }
+
+            for (var i = 0, j = 0; i < this.partCount; i++ , j += PART_MAXVAR) {
+                sum_XPosn += this.s1[j + PART_XPOS];
+                sum_YPosn += this.s1[j + PART_YPOS];
+                sum_ZPosn += this.s1[j + PART_ZPOS];
+            }
+
+            var avg_XPosn = sum_XPosn * inv_number;
+            var avg_YPosn = sum_YPosn * inv_number;
+            var avg_ZPosn = sum_ZPosn * inv_number;
+
+            var avg_Posn = new Vector3([avg_XPosn, avg_YPosn, avg_ZPosn]);
+
+
+            for (var i = 0, j = 0; i < this.partCount; i++ , j += PART_MAXVAR) {
+                var boid_posn = new Vector3([this.s1[j + PART_XPOS], this.s1[j + PART_YPOS], this.s1[j + PART_ZPOS]]);
+                var boid_dir = avg_Posn.subtract(boid_posn).normalize();
+                var boid_dist = this.calculateDistance_points(boid_posn, avg_Posn);
+
+
+                this.s1[j + PART_X_FTOT] += boid_dir.elements[0] * boid_dist;
+                this.s1[j + PART_Y_FTOT] += boid_dir.elements[1] * boid_dist;
+                this.s1[j + PART_Z_FTOT] += boid_dir.elements[2] * boid_dist;
+
+            }
+
+            // Rule-2 Boids keep a small distance away from other objects this is implemented by introducing a force object at each boids center position 
+
+            for (var i = 0, j = 0; i < boids_forces.length; i++ , j += PART_MAXVAR) {
+                this.forceList[i].bub_ctr = new Vector4([this.s2[j + PART_XPOS], this.s2[j + PART_YPOS], this.s2[j + PART_ZPOS], 1]);
+            }
+
+
+            ////Rule-3 Boids try to match each other's velocity
+
+            for (var i = 0, j = 0; i < this.partCount; i++ , j += PART_MAXVAR) {
+                sum_XVel += this.s1[j + PART_XVEL];
+                sum_YVel += this.s1[j + PART_YVEL];
+                sum_ZVel += this.s1[j + PART_ZVEL];
+            }
+
+            var avg_XVel = sum_XVel * inv_number;
+            var avg_YVel = sum_YVel * inv_number;
+            var avg_ZVel = sum_ZVel * inv_number;
+
+            var avg_Vel = new Vector3([avg_XVel, avg_YVel, avg_ZVel]);
+
+            console.log(avg_Vel);
+
+            for (var i = 0, j = 0; i < this.partCount; i++ , j += PART_MAXVAR) {
+                this.s1[j + PART_X_FTOT] += (this.s1[j + PART_XVEL] * 0.2) + avg_XVel * 0.2;
+                this.s1[j + PART_Y_FTOT] += (this.s1[j + PART_YVEL] * 0.2) + avg_YVel * 0.2;
+                this.s1[j + PART_Z_FTOT] += (this.s1[j + PART_ZVEL] * 0.2) + avg_ZVel * 0.2;
+            }
             break;
         default:
             console.log("Invalid Input");
@@ -2445,6 +2699,13 @@ PartSys.prototype.swap = function() {
 PartSys.prototype.clamp = function (min, max, number) {
     return Math.min(Math.max(number, min), max);
 };
+
+PartSys.prototype.range = function (min, max, number) {
+    if (number < min) return min;
+    else if (number > max) return max;
+    else return number;
+}
+
 
 PartSys.prototype.printPosition = function(s) {
   var j = 0;  // i==particle number; j==array index for i-th particle

@@ -89,14 +89,15 @@ var g_angleRate = 10.0;
 
 var g_ModelMatrix = new Matrix4();
 
-var x_lookAt =   0;
-var y_lookAt =   0;
-var z_lookAt = 1;
-var lookAtVector = new Vector3([x_lookAt, y_lookAt, z_lookAt]);
 var current_rotation = 0;
 var x_Coordinate = 1;
 var y_Coordinate = 5;
 var z_Coordinate = 2;
+var x_lookAt = 0;
+var y_lookAt = 0;
+var z_lookAt = z_Coordinate;
+
+var lookAtVector = new Vector3([x_lookAt, y_lookAt, z_lookAt]);
 var eyePosVector = new Vector3([x_Coordinate, y_Coordinate, z_Coordinate]);
 
 
@@ -112,14 +113,17 @@ all_Particle_systems.push(particleSys3D);
 particleSysFire = new particleFire();
 all_Particle_systems.push(particleSysFire);
 
-particleSysSpringPair = new particleSpringPair();
-all_Particle_systems.push(particleSysSpringPair);
+//particleSysSpringPair = new particleSpringPair();
+//all_Particle_systems.push(particleSysSpringPair);
 
 particleSysTornado = new particleTornado();
 all_Particle_systems.push(particleSysTornado);
 
 tetrahedronSpringSys = new particleSpringSolid();
 all_Particle_systems.push(tetrahedronSpringSys);
+
+boidsSystem = new particleBoids();
+all_Particle_systems.push(boidsSystem);
 
 
 //Bouncyball variables:
@@ -164,19 +168,30 @@ function main() {
     gl.clear(gl.COLOR_BUFFER_BIT);		  // clear it once to set that color as bkgnd.
     gl.enable(gl.DEPTH_TEST);
 
+
+
+    g_rotAngle = Math.acos(x_lookAt - x_Coordinate);
+
+
   // Initialize Particle systems:
   
     groundPlane.init();
     cube.init();
 
     particleSys3D.init(2);
+
     particleSysFire.init(200);
+
     particleSysTornado.init(20000);
 
-    particleSysSpringPair.init();
     tetrahedronSpringSys.init();
-
     springs.init(tetrahedronSpringSys.g_partA);
+
+    boidsSystem.init(200);
+
+    console.log("X LookAt = ", x_lookAt);
+    console.log("y_LookAt = ", y_lookAt);
+    console.log("z_LookAt = ", z_lookAt);
 
    vpAspect = g_canvas.width /     // On-screen aspect ratio for
              g_canvas.height ;  // this camera: width/height.
@@ -229,8 +244,8 @@ function animate() {
   // INSTRUMENTATION:  (delete if you don't care how much the time-steps varied)
   g_stepCount = (g_stepCount +1)%1000;		// count 0,1,2,...999,0,1,2,...
   //-----------------------end instrumentation
-  if(updateRotAngle == true){
-    g_rotAngle = g_rotAngle + (g_angleRate * elapsed * updateRotAngleSign) / 1000.0;
+    if (updateRotAngle == true) {
+        g_rotAngle += g_angleRate * updateRotAngleSign * g_timeStep * 0.001;
   }
 
   return elapsed;
@@ -304,6 +319,10 @@ function drawAll() {
                 break;
             case SPRING_SOLID:
                 tetrahedronSpringSys.draw();
+                break;
+            case BOIDS:
+                boidsSystem.draw();
+                break;
             default:
                 console.log("Invalid Particle System", all_Particle_systems[current_part_sys].g_partA.particleSystemType);
         }
@@ -341,11 +360,13 @@ function drawAll() {
                 break;
             case SPRING_SOLID:
                 tetrahedronSpringSys.render();
+                break;
+            case BOIDS:
+                boidsSystem.render();
+                break;
             default:
                 console.log("Invalid Particle System");
         }
-        //printControls();		// Display particle-system status on-screen. 
-        // Report mouse-drag totals since last re-draw:
     }
 }
 
@@ -493,29 +514,38 @@ function translationOnCamera(sign) {
 }
 
 function StrafingOnCamera(sign) {
-  var perpendicular_axis = lookAtVector.cross(eyePosVector).normalize();
+    var eyePosVectorNew = new Vector3([eyePosVector.elements[0], eyePosVector.elements[1], eyePosVector.elements[2]]);
+    var perpendicular_axis = lookAtVector.cross(eyePosVectorNew).normalize();
   
-  x_Coordinate += sign * perpendicular_axis.elements[0];
-  x_lookAt += sign * perpendicular_axis.elements[0];
 
-  y_lookAt += sign * perpendicular_axis.elements[1];
-  y_Coordinate += sign * perpendicular_axis.elements[1];
+    x_Coordinate += sign * perpendicular_axis.elements[0];
+    x_lookAt += sign * perpendicular_axis.elements[0];
+
+    y_lookAt += sign * perpendicular_axis.elements[1];
+    y_Coordinate += sign * perpendicular_axis.elements[1];
 }
 
 function verticalMovement(sign) {
-  var vertical_axis = eyePosVector.normalize();
-  z_Coordinate += sign * vertical_axis.elements[2] * 0.5;
-  z_lookAt += sign * vertical_axis.elements[2] * 0.5;
+    var vertical_axis = eyePosVector.normalize();
+    z_Coordinate += sign * vertical_axis.elements[2] * g_timeStep * 0.001;
+    z_lookAt += sign * vertical_axis.elements[2] * g_timeStep * 0.001;
 }
 
 function rotationOnCamera(sign, isVerticalAxis) {
-  if(isVerticalAxis) 
-    z_lookAt = z_lookAt + (sign * 0.1);
+    if (isVerticalAxis)
+        z_lookAt += sign * g_timeStep * 0.001 * 10;
   else
-  {
-    x_lookAt = x_Coordinate + Math.cos(g_rotAngle * 0.1 * sign);
-    y_lookAt = y_Coordinate + Math.sin(g_rotAngle * 0.1 * sign);
-    //z_lookAt = z_lookAt;
+    {
+
+        eyePosVector = new Vector3([x_Coordinate, y_Coordinate, z_Coordinate]);
+        lookAtVector = new Vector3([x_lookAt, y_lookAt, z_lookAt]);
+
+        lookdir = eyePosVector.subtract(lookAtVector).normalize();
+
+
+        x_lookAt = Math.cos(g_rotAngle * 0.1 * sign) + x_Coordinate;
+        y_lookAt = y_Coordinate + Math.sin(g_rotAngle * 0.1 * sign);
+
   } 
 
   eyePosVector = new Vector3([x_Coordinate, y_Coordinate, z_Coordinate]);
@@ -711,22 +741,22 @@ function myKeyDown(kev) {
 	  //'myKeyDown() r/R key: soft/hard Reset.';	// print on webpage,
 	  //console.log("r/R: soft/hard Reset");      // print on console,
       break;
-      case "KeyI":
-          var solvers = new Uint8Array([SOLV_EULER, SOLV_MIDPOINT, SOLV_BACK_EULER, SOLV_BACK_MIDPT]);
-          currSolver = solvers[3];
-          if (currSolver == solvers[3]) currSolver = solvers[0];
-          else if (currSolver == solvers[0]) currSolver = solvers[1];
+  //    case "KeyI":
+  //        var solvers = new Uint8Array([SOLV_EULER, SOLV_MIDPOINT, SOLV_BACK_EULER, SOLV_BACK_MIDPT]);
+  //        currSolver = solvers[3];
+  //        if (currSolver == solvers[3]) currSolver = solvers[0];
+  //        else if (currSolver == solvers[0]) currSolver = solvers[1];
 
-          console.log("Current Solver =", currSolver);
+  //        console.log("Current Solver =", currSolver);
 
-          all_Particle_systems[current_part_sys].g_partA.solvType = currSolver;
-          break;
-		//	if(all_Particle_systems[current_part_sys].g_partA.solvType == SOLV_EULER) all_Particle_systems[current_part_sys].g_partA.solvType = SOLV_OLDGOOD;  
-		//	else all_Particle_systems[current_part_sys].g_partA.solvType = SOLV_EULER;     
-			//document.getElementById('KeyDown').innerHTML =  
-			//'myKeyDown() found s/S key. Switch solvers!';       // print on webpage.
-		 // console.log("s/S: Change Solver:", all_Particle_systems[current_part_sys].g_partA.solvType); // print on console.
-			//break;
+  //        all_Particle_systems[current_part_sys].g_partA.solvType = currSolver;
+  //        break;
+		////	if(all_Particle_systems[current_part_sys].g_partA.solvType == SOLV_EULER) all_Particle_systems[current_part_sys].g_partA.solvType = SOLV_OLDGOOD;  
+		////	else all_Particle_systems[current_part_sys].g_partA.solvType = SOLV_EULER;     
+		//	//document.getElementById('KeyDown').innerHTML =  
+		//	//'myKeyDown() found s/S key. Switch solvers!';       // print on webpage.
+		// // console.log("s/S: Change Solver:", all_Particle_systems[current_part_sys].g_partA.solvType); // print on console.
+		//	//break;
 		case "Space":
       all_Particle_systems[current_part_sys].g_partA.runMode = 2;
 	  //document.getElementById('KeyDown').innerHTML =  
@@ -764,38 +794,38 @@ function ChangeSolvers(index) {
     all_Particle_systems[current_part_sys].g_partA.solvType = solvers[index];
 }
 
-//function printControls() {
+//function printcontrols() {
 ////==============================================================================
-//// Print current state of the particle system on the webpage:
-//	var recipTime = 1000.0 / g_timeStep;			// to report fractional seconds
-//	var recipMin  = 1000.0 / g_timeStepMin;
-//	var recipMax  = 1000.0 / g_timeStepMax; 
-//	var solvTypeTxt;												// convert solver number to text:
-//	if(all_Particle_systems[current_part_sys].g_partA.solvType==0) solvTypeTxt = 'Explicit--(unstable!)<br>';
-//	                  else  solvTypeTxt = 'Implicit--(stable)<br>'; 
-//	var bounceTypeTxt;											// convert bounce number to text
-//	if(all_Particle_systems[current_part_sys].g_partA.bounceType==0) bounceTypeTxt = 'Velocity Reverse(no rest)<br>';
-//	                     else bounceTypeTxt = 'Impulsive (will rest)<br>';
-//	var fountainText;
-//	if(all_Particle_systems[current_part_sys].g_partA.isFountain==0) fountainText = 'OFF: ageless particles.<br>';
-//	else                      fountainText = 'ON: re-cycle old particles.<br>';
-//	var xvLimit = all_Particle_systems[current_part_sys].g_partA.s2[PART_XVEL];	// find absolute values of s2[PART_XVEL]
-//	if(all_Particle_systems[current_part_sys].g_partA.s2[PART_XVEL] < 0.0) xvLimit = -all_Particle_systems[current_part_sys].g_partA.s2[PART_XVEL];
-//	var yvLimit = all_Particle_systems[current_part_sys].g_partA.s2[PART_YVEL];	// find absolute values of s2[PART_YVEL]
-//	if(all_Particle_systems[current_part_sys].g_partA.s2[PART_YVEL] < 0.0) yvLimit = -all_Particle_systems[current_part_sys].g_partA.s2[PART_YVEL];
+//// print current state of the particle system on the webpage:
+//	var reciptime = 1000.0 / g_timestep;			// to report fractional seconds
+//	var recipmin  = 1000.0 / g_timestepmin;
+//	var recipmax  = 1000.0 / g_timestepmax; 
+//	var solvtypetxt;												// convert solver number to text:
+//	if(all_particle_systems[current_part_sys].g_parta.solvtype==0) solvtypetxt = 'explicit--(unstable!)<br>';
+//	                  else  solvtypetxt = 'implicit--(stable)<br>'; 
+//	var bouncetypetxt;											// convert bounce number to text
+//	if(all_particle_systems[current_part_sys].g_parta.bouncetype==0) bouncetypetxt = 'velocity reverse(no rest)<br>';
+//	                     else bouncetypetxt = 'impulsive (will rest)<br>';
+//	var fountaintext;
+//	if(all_particle_systems[current_part_sys].g_parta.isfountain==0) fountaintext = 'off: ageless particles.<br>';
+//	else                      fountaintext = 'on: re-cycle old particles.<br>';
+//	var xvlimit = all_particle_systems[current_part_sys].g_parta.s2[part_xvel];	// find absolute values of s2[part_xvel]
+//	if(all_particle_systems[current_part_sys].g_parta.s2[part_xvel] < 0.0) xvlimit = -all_particle_systems[current_part_sys].g_parta.s2[part_xvel];
+//	var yvlimit = all_particle_systems[current_part_sys].g_parta.s2[part_yvel];	// find absolute values of s2[part_yvel]
+//	if(all_particle_systems[current_part_sys].g_parta.s2[part_yvel] < 0.0) yvlimit = -all_particle_systems[current_part_sys].g_parta.s2[part_yvel];
 	
-//	document.getElementById('KeyControls').innerHTML = 
-//   			'<b>Solver = </b>' + solvTypeTxt + 
-//   			'<b>Bounce = </b>' + bounceTypeTxt +
-//   			'<b>Fountain =</b>' + fountainText +
-//   			'<b>drag = </b>' + all_Particle_systems[current_part_sys].g_partA.drag.toFixed(5) + 
-//   			', <b>grav = </b>' + all_Particle_systems[current_part_sys].g_partA.grav.toFixed(5) +
-//   			' m/s^2; <b>yVel = +/-</b> ' + yvLimit.toFixed(5) + 
-//   			' m/s; <b>xVel = +/-</b> ' + xvLimit.toFixed(5) + 
-//   			' m/s;<br><b>timeStep = </b> 1/' + recipTime.toFixed(3) + ' sec' +
-//   			                ' <b>min:</b> 1/' + recipMin.toFixed(3)  + ' sec' + 
-//   			                ' <b>max:</b> 1/' + recipMax.toFixed(3)  + ' sec<br>';
-//   			' <b>stepCount: </b>' + g_stepCount.toFixed(3) ;
+//    document.getelementbyid('KeyControls').innerhtml =
+//        '<b>x_lookAt = </b>' + x_lookAt +
+//    '<b>y_lookAt = </b>' + y_lookAt +
+//    '<b>z_lookAt =</b>' + z_lookAt +
+//   			'<b>drag = </b>' + all_particle_systems[current_part_sys].g_parta.drag.tofixed(5) + 
+//   			', <b>grav = </b>' + all_particle_systems[current_part_sys].g_parta.grav.tofixed(5) +
+//   			' m/s^2; <b>yvel = +/-</b> ' + yvlimit.tofixed(5) + 
+//   			' m/s; <b>xvel = +/-</b> ' + xvlimit.tofixed(5) + 
+//   			' m/s;<br><b>timestep = </b> 1/' + reciptime.tofixed(3) + ' sec' +
+//   			                ' <b>min:</b> 1/' + recipmin.tofixed(3)  + ' sec' + 
+//   			                ' <b>max:</b> 1/' + recipmax.tofixed(3)  + ' sec<br>';
+//   			' <b>stepcount: </b>' + g_stepcount.tofixed(3) ;
 //}
 
 

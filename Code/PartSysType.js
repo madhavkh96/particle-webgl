@@ -12,6 +12,7 @@ const CLOTH = 4;
 const TORNADO = 5;
 const SPRING_ROPE = 6;
 const SPRING_SOLID = 7;
+const BOIDS = 8;
 
 //Constructor
 function PartSysType() {
