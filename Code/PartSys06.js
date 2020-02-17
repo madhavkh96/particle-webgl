@@ -2652,10 +2652,6 @@ PartSys.prototype.particleBehaviour = function () {
             var avg_YVel = sum_YVel * inv_number;
             var avg_ZVel = sum_ZVel * inv_number;
 
-            var avg_Vel = new Vector3([avg_XVel, avg_YVel, avg_ZVel]);
-
-            console.log(avg_Vel);
-
             for (var i = 0, j = 0; i < this.partCount; i++ , j += PART_MAXVAR) {
                 this.s1[j + PART_X_FTOT] += (this.s1[j + PART_XVEL] * 0.2) + avg_XVel * 0.2;
                 this.s1[j + PART_Y_FTOT] += (this.s1[j + PART_YVEL] * 0.2) + avg_YVel * 0.2;
