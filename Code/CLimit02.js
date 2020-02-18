@@ -94,7 +94,9 @@ const LIM_MAT_DISC= 9;    // Matrix-transformed LIM_DISC:(recommend zMin=zMax=0)
                           // rotate only) transforms 'world' drawing axes to our 
                           // own 'pose' drawing axes,
                           //  where xMin,xMax,yMin,yMax,zMin,zMax members are
-                          // applied just as they were in LIM_DISC.   
+                          // applied just as they were in LIM_DISC.
+const LIM_VOL_CONE = 16 
+
 // You could continue this with other shapes too: LIM_CYL_VOL for a cylinder 
 // volume; LIM_CYL_SIDE for 2-sided cylindrical tube,LIM_MAT_CYL_VOL and
 // LIM_MAT_CYL_SIDE for transformed cylinder volume and tube, etc.
@@ -117,7 +119,7 @@ const LIM_RADIUS  =14;    // Prevent any particle in a set (targFirst,targCount)
                           // hard solid spheres that can't pass thru each other.
 const LIM_PULLEY  =15;    // Keep constant sum-of-distances for 3 particles
                           // A,B,Pivot:  ||A-Pivot||+||B-Pivot|| = dmax.
-const LIM_MAXVAR  =16;    // Max number of possible limitType values available.
+const LIM_MAXVAR  =17;    // Max number of possible limitType values available.
 
 //=============================================================================
 //==============================================================================
@@ -155,6 +157,17 @@ function CLimit() {
                                   // axes to 'pose' axes where we define 'wall'
                                   // and other non-axis-aligned constraints.
   this.radius = 1.0;        // hard/solid particle size imposed by by LIM_RADIUS
+
+    //Special Variable for anchor point
+
+    this.anchorPoint = -1;
+    this.anchorPosition = new Vector4([0, 0, 0, 1]);
+
+    //Special Variable for cone
+    this.height = 1.0;
+    this.K_coneCenter = new Vector4([0.0, 0.0, 0.0, 1.0]);
+    this.coneBoundary = 0;      //0 = inward; 1 = outwards
+
 }
 
 CLimit.prototype.printMe = function(opt_src) {
