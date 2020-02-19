@@ -52,46 +52,45 @@ function makeGroundGrid() {
 }
 
 function makeCube() {
-    var floatsPerVertex = 7;
     cubeVerts = new Float32Array(
         [   
-        //    X     Y     Z    W
-            0.95, 0.95, 0.95, 1.0, 1.0, 1.0, 1.0,
-            0.95, -0.95, 0.95, 1.0, 1.0, 1.0, 1.0,
+            //    X     Y     Z    W
+            V1.elements[0], V1.elements[1], V1.elements[2], 1.0, 1.0, 1.0, 1.0,         
+            V2.elements[0], V2.elements[1], V2.elements[2], 1.0, 1.0, 1.0, 1.0,         
 
-            0.95, -0.95, 0.95, 1.0, 1.0, 1.0, 1.0,
-            0.95, -0.95, -0.95, 1.0, 1.0, 1.0, 1.0,
+            V2.elements[0], V2.elements[1], V2.elements[2], 1.0, 1.0, 1.0, 1.0,         
+            V3.elements[0], V3.elements[1], V3.elements[2], 1.0, 1.0, 1.0, 1.0,         
 
-            0.95, -0.95, -0.95, 1.0, 1.0, 1.0, 1.0,
-            0.95, 0.95, -0.95, 1.0, 1.0, 1.0, 1.0, 
+            V3.elements[0], V3.elements[1], V3.elements[2], 1.0, 1.0, 1.0, 1.0,         
+            V4.elements[0], V4.elements[1], V4.elements[2], 1.0, 1.0, 1.0, 1.0,         
 
-            0.95, 0.95, -0.95, 1.0, 1.0, 1.0, 1.0,
-            0.95, 0.95, 0.95, 1.0, 1.0, 1.0, 1.0,
+            V4.elements[0], V4.elements[1], V4.elements[2], 1.0, 1.0, 1.0, 1.0,         
+            V1.elements[0], V1.elements[1], V1.elements[2], 1.0, 1.0, 1.0, 1.0,
 
 
-            0.95, 0.95, -0.95, 1.0, 1.0, 1.0, 1.0, 
-            -0.95, 0.95, -0.95, 1.0, 1.0, 1.0, 1.0, 
+            V4.elements[0], V4.elements[1], V4.elements[2], 1.0, 1.0, 1.0, 1.0,         
+            V5.elements[0], V5.elements[1], V5.elements[2], 1.0, 1.0, 1.0, 1.0,         
 
-            -0.95, 0.95, -0.95, 1.0, 1.0, 1.0, 1.0, 
-            -0.95, 0.95, 0.95, 1.0, 1.0, 1.0, 1.0,
+            V5.elements[0], V5.elements[1], V5.elements[2], 1.0, 1.0, 1.0, 1.0,         
+            V6.elements[0], V6.elements[1], V6.elements[2], 1.0, 1.0, 1.0, 1.0,         
 
-            -0.95, 0.95, 0.95, 1.0, 1.0, 1.0, 1.0,
-            -0.95, -0.95, 0.95, 1.0, 1.0, 1.0, 1.0,
+            V6.elements[0], V6.elements[1], V6.elements[2], 1.0, 1.0, 1.0, 1.0,         
+            V7.elements[0], V7.elements[1], V7.elements[2], 1.0, 1.0, 1.0, 1.0,         
 
-            -0.95, -0.95, 0.95, 1.0, 1.0, 1.0, 1.0,
-            -0.95, -0.95, -0.95, 1.0, 1.0, 1.0, 1.0,
+            V7.elements[0], V7.elements[1], V7.elements[2], 1.0, 1.0, 1.0, 1.0,         
+            V8.elements[0], V8.elements[1], V8.elements[2], 1.0, 1.0, 1.0, 1.0,         
 
-            -0.95, -0.95, -0.95, 1.0, 1.0, 1.0, 1.0,
-            -0.95, 0.95, -0.95, 1.0, 1.0, 1.0, 1.0, 
+            V8.elements[0], V8.elements[1], V8.elements[2], 1.0, 1.0, 1.0, 1.0,         
+            V5.elements[0], V5.elements[1], V5.elements[2], 1.0, 1.0, 1.0, 1.0,         
 
-            -0.95, -0.95, -0.95, 1.0, 1.0, 1.0, 1.0,
-            0.95, -0.95, -0.95, 1.0, 1.0, 1.0, 1.0,
+            V8.elements[0], V8.elements[1], V8.elements[2], 1.0, 1.0, 1.0, 1.0,         
+            V3.elements[0], V3.elements[1], V3.elements[2], 1.0, 1.0, 1.0, 1.0,         
 
-            -0.95, -0.95, 0.95, 1.0, 1.0, 1.0, 1.0,
-            0.95, -0.95, 0.95, 1.0, 1.0, 1.0, 1.0,
+            V7.elements[0], V7.elements[1], V7.elements[2], 1.0, 1.0, 1.0, 1.0,         
+            V2.elements[0], V2.elements[1], V2.elements[2], 1.0, 1.0, 1.0, 1.0,         
 
-            -0.95, 0.95, 0.95, 1.0, 1.0, 1.0, 1.0,
-            0.95, 0.95, 0.95, 1.0, 1.0, 1.0, 1.0
+            V6.elements[0], V6.elements[1], V6.elements[2], 1.0, 1.0, 1.0, 1.0,         
+            V1.elements[0], V1.elements[1], V1.elements[2], 1.0, 1.0, 1.0, 1.0
         ]);
 }
 
@@ -1295,7 +1294,7 @@ particleBoids.prototype.debug = function () {
 }
 
 particleBoids.prototype.update = function () {
-    this.init(bouncyBallParticlesCount);
+    this.init(boids_particles);
 }
 
 //==============================================================================

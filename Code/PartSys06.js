@@ -677,7 +677,7 @@ PartSys.prototype.initFireReeves = function(count, shader) {
 
     //--------------------------init Particle System Controls:
     this.runMode = 3;// Master Control: 0=reset; 1= pause; 2=step; 3=run
-    this.solvType = SOLV_BACK_MIDPT;// adjust by s/S keys.
+    this.solvType = fireSolver;// adjust by s/S keys.
     // SOLV_EULER (explicit, forward-time, as 
     // found in BouncyBall03.01BAD and BouncyBall04.01badMKS)
     // SOLV_OLDGOOD for special-case implicit solver, reverse-time, 
@@ -941,7 +941,7 @@ PartSys.prototype.initTornado = function(count, shader) {
 
     //--------------------------init Particle System Controls:
     this.runMode = 3;// Master Control: 0=reset; 1= pause; 2=step; 3=run
-    this.solvType = SOLV_BACK_MIDPT;// adjust by s/S keys.
+    this.solvType = tornadoSolver;// adjust by s/S keys.
 
     this.bounceType = 1;  // floor-bounce constraint type:
 
@@ -1106,6 +1106,8 @@ PartSys.prototype.initFlocking = function(count, shader) {
 
     //Set the current Particle System and push it
 
+    this.controlAggressor = boids_ControlBox;
+
     this.particleSystemType = BOIDS;
 
     // Report:
@@ -1152,7 +1154,7 @@ PartSys.prototype.initFlocking = function(count, shader) {
 
     //--------------------------init Particle System Controls:
     this.runMode = 3;// Master Control: 0=reset; 1= pause; 2=step; 3=run
-    this.solvType = bouncySolver;// adjust by s/S keys.
+    this.solvType = boids_solver;// adjust by s/S keys.
     console.log(this.solvType);
     // SOLV_EULER (explicit, forward-time, as 
     // found in BouncyBall03.01BAD and BouncyBall04.01badMKS)
@@ -1188,9 +1190,9 @@ PartSys.prototype.initFlocking = function(count, shader) {
         this.s1[j + PART_ZPOS] = -0.8 + 0.1 * this.randZ;
         this.s1[j + PART_WPOS] = 1.0;      // position 'w' coordinate;
         this.roundRand(); // Now choose random initial velocities too:
-        this.s1[j + PART_XVEL] = this.INIT_VEL * (0.4 + 0.2 * this.randX);
-        this.s1[j + PART_YVEL] = this.INIT_VEL * (0.4 + 0.2 * this.randY);
-        this.s1[j + PART_ZVEL] = this.INIT_VEL * (0.4 + 0.2 * this.randZ);
+        this.s1[j + PART_XVEL] = this.INIT_VEL * (0.4 + 0.2 * this.randX) * 0.5;
+        this.s1[j + PART_YVEL] = this.INIT_VEL * (0.4 + 0.2 * this.randY) * 0.1;
+        this.s1[j + PART_ZVEL] = this.INIT_VEL * (0.4 + 0.2 * this.randZ) * 0.5;
         this.s1[j + PART_MASS] = 1.0;      // mass, in kg.
         this.s1[j + PART_DIAM] = this.size; // on-screen diameter, in pixels
         this.s1[j + PART_RENDMODE] = 0.0;
@@ -1208,14 +1210,24 @@ PartSys.prototype.initFlocking = function(count, shader) {
         fTmp = new CForcer();
 
         fTmp.forceType = F_BUBBLE;
-        fTmp.bub_ctr = new Vector4(this.s1[j + PART_XPOS], this.s1[j + PART_YPOS], this.s1[j + PART_ZPOS], 1);
-        fTmp.bub_force = -1.0;
+        fTmp.bub_ctr = new Vector4([this.s1[j + PART_XPOS], this.s1[j + PART_YPOS], this.s1[j + PART_ZPOS], 1]);
+        fTmp.bub_radius = 0.02;
+        fTmp.bub_force = -0.001;
         fTmp.bub_force_applicable_distance = 0.1;
         this.forceList.push(fTmp);
 
         //----------------------------
         this.s2.set(this.s1);   // COPY contents of state-vector s1 to s2.
     }
+
+    //Aggressor
+
+    fTmp.forceType = F_BUBBLE;
+    fTmp.bub_ctr = new Vector4([0.0, 2.5, 0.0, 1.0]);
+    fTmp.bub_radius = 0.01;
+    fTmp.bub_force = boids_aggressorForce;
+    fTmp.bub_force_applicable_distance = boids_aggressorAffectDistance;
+
 
     this.FSIZE = this.s1.BYTES_PER_ELEMENT;  // 'float' size, in bytes.
     // Create a vertex buffer object (VBO) in the graphics hardware: get its ID# 
@@ -2657,6 +2669,14 @@ PartSys.prototype.particleBehaviour = function () {
                 this.s1[j + PART_Y_FTOT] += (this.s1[j + PART_YVEL] * 0.2) + avg_YVel * 0.2;
                 this.s1[j + PART_Z_FTOT] += (this.s1[j + PART_ZVEL] * 0.2) + avg_ZVel * 0.2;
             }
+
+
+            if (boids_ControlBox) {
+                this.forceList[this.forceList.length - 1].bub_ctr = new Vector4([boids_aggressorX, boids_aggressorY, boids_aggressorZ, 1.0]);
+                this.forceList[this.forceList.length - 1].bub_force = boids_aggressorForce;
+                this.forceList[this.forceList.length - 1].bub_force_applicable_distance = boids_aggressorAffectDistance;
+            }
+
             break;
         default:
             console.log("Invalid Input");

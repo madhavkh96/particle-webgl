@@ -90,8 +90,8 @@ var g_angleRate = 10.0;
 var g_ModelMatrix = new Matrix4();
 
 var current_rotation = 0;
-var x_Coordinate = 1;
-var y_Coordinate = 5;
+var x_Coordinate = -5;
+var y_Coordinate = -1;
 var z_Coordinate = 2;
 var x_lookAt = 0;
 var y_lookAt = 0;
@@ -103,46 +103,98 @@ var eyePosVector = new Vector3([x_Coordinate, y_Coordinate, z_Coordinate]);
 
 var all_Particle_systems = [];
 var current_part_sys = 0;
-groundPlane = new groundVBO();
-cube = new drawCube();
-springs = new drawSprings();
 
+groundPlane = new groundVBO();
+springs = new drawSprings();
+//========================================================
+
+//Bouncy balls
 particleSys3D = new particle3D();
 all_Particle_systems.push(particleSys3D);
+BuildCube(0.95, 0.95, 0.95, 0, 0, 0, true);
+bouncyCube = new drawCube();
+//========================================================
 
+//Fire
 particleSysFire = new particleFire();
 all_Particle_systems.push(particleSysFire);
+BuildCube(0.95, 0.95, 0.95, 0, 0, 0, true);
+fireCube = new drawCube();
+//========================================================
 
 //particleSysSpringPair = new particleSpringPair();
 //all_Particle_systems.push(particleSysSpringPair);
+//========================================================
 
+//Tornado
 particleSysTornado = new particleTornado();
 all_Particle_systems.push(particleSysTornado);
+BuildCube(20.95, 20.95, 40.95, 0, 0, 0, true);
+tornadoCube = new drawCube();
+//========================================================
 
+//Springy Tetrahedron
 tetrahedronSpringSys = new particleSpringSolid();
 all_Particle_systems.push(tetrahedronSpringSys);
+BuildCube(1, 1, 1, 0, 0, 0, true);
+tet_Cube = new drawCube();
+//========================================================
 
+//Boids
 boidsSystem = new particleBoids();
 all_Particle_systems.push(boidsSystem);
-
+BuildCube(5.95, 5.95, 5.95, 0, 0, 0, true);
+boidsCube = new drawCube();
+//--------------------------------------------------------
+BuildCube(1.0, 1.0, 1.0, 0, 0, 2.5, false);
+aggressorCube = new drawCube();
+//========================================================
 
 //Bouncyball variables:
 bouncyBallParticlesCount = 2;
 bouncySolver = SOLV_BACK_MIDPT;
+//========================================================
 
 //Fire variables:
 firePariclesCount = 200;
 fireSolver = SOLV_BACK_MIDPT;
+//========================================================
 
 //Tornado variables:
 tornadoParticlesCount = 15000;
 tornadoSolver = SOLV_BACK_MIDPT;
+//========================================================
 
 //tetrahedron variables: 
 tet_restLength = 0.2;
 tet_springConst = 60;
 tet_dampCoeff = 3.5;
 tet_solver = SOLV_BACK_MIDPT;
+//========================================================
+
+
+//Boids variables
+boids_particles = 200;
+boids_aggressorForce = -50;
+boids_aggressorAffectDistance = 1.0;
+boids_ControlBox = false;
+boids_solver = SOLV_BACK_MIDPT;
+//-------------------------------------------------------
+//private vars:
+boids_aggressorX = 0;
+boids_aggressorY = 2.5;
+boids_aggressorZ = 0;
+
+
+//Vertices;
+V1 = new Vector3();
+V2 = new Vector3();
+V3 = new Vector3();
+V4 = new Vector3();
+V5 = new Vector3();
+V6 = new Vector3();
+V7 = new Vector3();
+V8 = new Vector3();
 
 function main() {
 //==============================================================================
@@ -169,25 +221,29 @@ function main() {
     gl.enable(gl.DEPTH_TEST);
 
 
-
-    g_rotAngle = Math.acos(x_lookAt - x_Coordinate);
-
-
   // Initialize Particle systems:
   
     groundPlane.init();
-    cube.init();
 
     particleSys3D.init(2);
+    bouncyCube.init();
 
     particleSysFire.init(200);
+    fireCube.init();
 
     particleSysTornado.init(20000);
+    tornadoCube.init();
 
     tetrahedronSpringSys.init();
     springs.init(tetrahedronSpringSys.g_partA);
+    tet_Cube.init();
+
 
     boidsSystem.init(200);
+    boidsCube.init();
+    aggressorCube.init();
+
+
 
     console.log("X LookAt = ", x_lookAt);
     console.log("y_LookAt = ", y_lookAt);
@@ -274,10 +330,6 @@ function drawAll() {
     groundPlane.adjust();
     groundPlane.render();
 
-    cube.switchToMe();
-    cube.adjust();
-    cube.render();
-
     if (all_Particle_systems[current_part_sys].g_partA.showSprings) {
         springs.switchToMe();
         springs.adjust();
@@ -307,21 +359,39 @@ function drawAll() {
         switch (all_Particle_systems[current_part_sys].g_partA.particleSystemType) {
             case BOUNCY_BALL:
                 particleSys3D.draw();
+                bouncyCube.switchToMe();
+                bouncyCube.adjust();
+                bouncyCube.render();
                 break;
             case FIRE:
                 particleSysFire.draw();
+                fireCube.switchToMe();
+                fireCube.adjust();
+                fireCube.render();
                 break;
             case SPRING_PAIR:
                 particleSysSpringPair.draw();
                 break;
             case TORNADO:
                 particleSysTornado.draw();
+                tornadoCube.switchToMe();
+                tornadoCube.adjust();
+                tornadoCube.render();
                 break;
             case SPRING_SOLID:
                 tetrahedronSpringSys.draw();
+                tet_Cube.switchToMe();
+                tet_Cube.adjust();
+                tet_Cube.render();
                 break;
             case BOIDS:
                 boidsSystem.draw();
+                boidsCube.switchToMe();
+                boidsCube.adjust();
+                boidsCube.render();
+                aggressorCube.switchToMe();
+                aggressorCube.adjust();
+                aggressorCube.render();
                 break;
             default:
                 console.log("Invalid Particle System", all_Particle_systems[current_part_sys].g_partA.particleSystemType);
@@ -335,9 +405,6 @@ function drawAll() {
         groundPlane.switchToMe();
         groundPlane.render();
 
-        cube.switchToMe();
-        cube.render();
-
         if (all_Particle_systems[current_part_sys].g_partA.showSprings) {
             springs.switchToMe();
             springs.render();
@@ -346,23 +413,38 @@ function drawAll() {
         switch (all_Particle_systems[current_part_sys].g_partA.particleSystemType) {
             case BOUNCY_BALL:
                 particleSys3D.render();
+                bouncyCube.switchToMe();
+                bouncyCube.render();
                 break;
             case FIRE:
                 particleSysFire.render();
+                fireCube.switchToMe();
+                fireCube.render();
                 break;
             case SPRING_PAIR:
                 particleSysSpringPair.render();
-                springs.switchToMe();
-                springs.render();
                 break;
             case TORNADO:
                 particleSysTornado.render();
+                tornadoCube.switchToMe();
+                tornadoCube.render();
+
                 break;
             case SPRING_SOLID:
                 tetrahedronSpringSys.render();
+                springs.switchToMe();
+                springs.render();
+                tet_Cube.switchToMe();
+                tet_Cube.adjust();
+                tet_Cube.render();
                 break;
             case BOIDS:
                 boidsSystem.render();
+                boidsCube.switchToMe();
+                boidsCube.adjust();
+                boidsCube.render();
+                aggressorCube.switchToMe();
+                aggressorCube.render();
                 break;
             default:
                 console.log("Invalid Particle System");
@@ -490,6 +572,15 @@ function myMouseDblClick(ev) {
 //	console.log("myMouse-DOUBLE-Click() on button: ", ev.button); 
 }	
 
+function MoveAggressor(sign, forward) {
+    if (forward) {
+        MoveAggressor
+        
+    }
+
+}
+
+
 function MoveCameraLocation(sign, displacement) {
   x_Coordinate = x_Coordinate + sign * displacement[0];
   y_Coordinate = y_Coordinate + sign * displacement[1];
@@ -585,17 +676,29 @@ function myKeyDown(kev) {
   g_timeStepMax = g_timeStep;
 
   switch(kev.code) {
-    case "KeyW":
-      translationOnCamera(1, false);
+      case "KeyW":
+          if (!boids_ControlBox)
+              translationOnCamera(1, false);
+          else
+              MoveAggressor(1, true);
       break;
-    case "KeyS":
-      translationOnCamera(-1, false);
+      case "KeyS":
+          if (!boids_ControlBox)
+              translationOnCamera(-1, false);
+          else
+              MoveAggressor(-1, true);
       break;
-    case "KeyA":
-      StrafingOnCamera(-1);
+      case "KeyA":
+          if (!boids_ControlBox)
+              StrafingOnCamera(-1);
+          else
+              MoveAggressor(1, false);
       break;
-    case "KeyD":
-      StrafingOnCamera(1);
+      case "KeyD":
+          if (!boids_ControlBox)
+              StrafingOnCamera(1);
+          else
+              MoveAggressor(-1, false);
       break;
     case "ArrowUp":
       rotationOnCamera(1, true);
@@ -894,11 +997,31 @@ var TetrahedronGUI = function () {
 
 }
 
+var BoidsGUI = function () {
+
+    this.particles = boids_particles;
+    this.solver = boids_solver;
+    this.aggressorForce = boids_aggressorForce;
+    this.aggressorAffectDist = boids_aggressorAffectDistance;
+    this.ControlAggressor = boids_ControlBox;
+
+    this.reload = function () {
+        boids_particles = this.particles;
+        boids_solver = this.solver;
+        boids_aggressorForce = this.aggressorForce;
+        boids_aggressorAffectDistance = this.aggressorAffectDist;
+        boidsSystem.update();
+        ChangeSolvers(this.solver);
+    }
+}
+
+
 function windowLoad() {
     var bouncyFolder = new BouncyBallsGUI();
     var fireFolder = new FireGUI();
     var tornadoFolder = new TornadoGUI();
     var tetrahedronFolder = new TetrahedronGUI();
+    var boidsFolder = new BoidsGUI();
     var gui = new dat.GUI();
 
     //Bouncy Particles Controller
@@ -924,7 +1047,35 @@ function windowLoad() {
     springSolid.add(tetrahedronFolder, 'dampCoeff');
     springSolid.add(tetrahedronFolder, 'reload');
 
-
+    var boids = gui.addFolder('Boids');
+    boids.add(boidsFolder, 'particles');
+    boids.add(boidsFolder, 'solver', { EULER: SOLV_EULER, MID_POINT: SOLV_MIDPOINT, BACK_EULER: SOLV_BACK_EULER, BACK_MID_POINT: SOLV_BACK_MIDPT });
+    boids.add(boidsFolder, 'ControlAggressor');
+    boids.add(boidsFolder, 'aggressorForce', -100, -20);
+    boids.add(boidsFolder, 'aggressorAffectDist', 0.2, 4);
+    boids.add(boidsFolder, 'reload');
     normalParticles.open();
 }
 
+function BuildCube(length, breadth, height, offset_x, offset_y, offset_z, base) {
+    if (base) {
+        V1 = new Vector3([length + offset_x, breadth + offset_y, height + offset_z]);
+        V2 = new Vector3([length + offset_x, -breadth + offset_y, height + offset_z]);
+        V3 = new Vector3([length + offset_x, -breadth + offset_y, -0.95 + offset_z]);
+        V4 = new Vector3([length + offset_x, breadth + offset_y, -0.95 + offset_z]);
+        V5 = new Vector3([-length + offset_x, breadth + offset_y, -0.95 + offset_z]);
+        V6 = new Vector3([-length + offset_x, breadth + offset_y, height + offset_z]);
+        V7 = new Vector3([-length + offset_x, -breadth + offset_y, height + offset_z]);
+        V8 = new Vector3([-length + offset_x, -breadth + offset_y, -0.95 + offset_z]);
+    } else {
+        V1 = new Vector3([length + offset_x, breadth + offset_y, height + offset_z]);
+        V2 = new Vector3([length + offset_x, -breadth + offset_y, height + offset_z]);
+        V3 = new Vector3([length + offset_x, -breadth + offset_y, -height + offset_z]);
+        V4 = new Vector3([length + offset_x, breadth + offset_y, -height + offset_z]);
+        V5 = new Vector3([-length + offset_x, breadth + offset_y, -height  + offset_z]);
+        V6 = new Vector3([-length + offset_x, breadth + offset_y, height + offset_z]);
+        V7 = new Vector3([-length + offset_x, -breadth + offset_y, height + offset_z]);
+        V8 = new Vector3([-length + offset_x, -breadth + offset_y, -height  + offset_z]);
+
+    }
+}
