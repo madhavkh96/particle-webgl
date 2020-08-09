@@ -875,7 +875,6 @@ function drawSprings() {
     this.point1 = new Vector4();
     this.point2 = new Vector4();
     this.ModelMat = new Matrix4();
-
 };
 
 drawSprings.prototype.init = function (particleSystem) {
@@ -889,7 +888,7 @@ drawSprings.prototype.init = function (particleSystem) {
 
     this.particleSystem = particleSystem;
     var floatPerVertex = 7;
-    this.points = new Float32Array(sum_factorialize(this.particleSystem.partCount) * floatPerVertex - floatPerVertex);
+    this.points = new Float32Array(sum_factorialize(this.particleSystem.partCount) * floatPerVertex + floatPerVertex);
 
     this.vboContents = this.points;
     this.vboVerts = this.points.length / floatPerVertex;
@@ -903,6 +902,36 @@ drawSprings.prototype.init = function (particleSystem) {
     this.vboOffset_a_Colr0 = this.vboFcount_a_Pos0 * this.FSIZE;
 
     gl.program = this.shaderLoc;    // (to match cuon-utils.js -- initShaders())
+
+    var j = 0;
+    for (var z = 0; z < this.particleSystem.partCount; z++) {
+        for (var i = z; i < this.particleSystem.partCount; i++ , j += 7) {
+            this.points[j + 0] = this.particleSystem.s1[(i * PART_MAXVAR) + PART_XPOS];
+            this.points[j + 1] = this.particleSystem.s1[(i * PART_MAXVAR) + PART_YPOS];
+            this.points[j + 2] = this.particleSystem.s1[(i * PART_MAXVAR) + PART_ZPOS];
+            this.points[j + 3] = 1.0;
+            this.points[j + 4] = Math.random();
+            this.points[j + 5] = Math.random();
+            this.points[j + 6] = Math.random();
+        }
+    }
+
+
+    this.points[7 * ((this.points.length / 7) - 2) + 0] = this.points[0 + (7 * 3)];
+    this.points[7 * ((this.points.length / 7) - 2) + 1] = this.points[1 + (7 * 3)];
+    this.points[7 * ((this.points.length / 7) - 2) + 2] = this.points[2 + (7 * 3)];
+    this.points[7 * ((this.points.length / 7) - 2) + 3] = this.points[3 + (7 * 3)];
+    this.points[7 * ((this.points.length / 7) - 2) + 4] = this.points[4 + (7 * 3)];
+    this.points[7 * ((this.points.length / 7) - 2) + 5] = this.points[5 + (7 * 3)];
+    this.points[7 * ((this.points.length / 7) - 2) + 6] = this.points[6 + (7 * 3)];
+
+    this.points[7 * ((this.points.length / 7) - 2) + 7] = this.points[0+ (7 * 2)];
+    this.points[7 * ((this.points.length / 7) - 2) + 8] = this.points[1+ (7 * 2)];
+    this.points[7 * ((this.points.length / 7) - 2) + 9] = this.points[2 + (7 * 2)];
+    this.points[7 * ((this.points.length / 7) - 2) + 10] = this.points[3+ (7 * 2)];
+    this.points[7 * ((this.points.length / 7) - 2) + 11] = this.points[4+ (7 * 2)];
+    this.points[7 * ((this.points.length / 7) - 2) + 12] = this.points[5+ (7 * 2)];
+    this.points[7 * ((this.points.length / 7) - 2) + 13] = this.points[6 + (7 * 2)];
 
     // b) Create VBO on GPU, fill it------------------------------------------------
     this.vboLoc = gl.createBuffer();
@@ -952,11 +981,21 @@ drawSprings.prototype.switchToMe = function () {
             this.points[j + 1] = this.particleSystem.s1[(i * PART_MAXVAR) + PART_YPOS];
             this.points[j + 2] = this.particleSystem.s1[(i * PART_MAXVAR) + PART_ZPOS];
             this.points[j + 3] = 1.0;
-            this.points[j + 4] = 1.0;
-            this.points[j + 5] = 1.0;
-            this.points[j + 6] = 1.0;
+            //this.points[j + 4] = this.red;
+            //this.points[j + 5] = this.green;
+            //this.points[j + 6] = this.blue;
         }
     }
+
+    this.points[7 * ((this.points.length / 7) - 2) + 0] = this.points[0 + (7 * 3)];
+    this.points[7 * ((this.points.length / 7) - 2) + 1] = this.points[1 + (7 * 3)];
+    this.points[7 * ((this.points.length / 7) - 2) + 2] = this.points[2 + (7 * 3)];
+    this.points[7 * ((this.points.length / 7) - 2) + 3] = this.points[3 + (7 * 3)];
+
+    this.points[7 * ((this.points.length / 7) - 2) + 7] = this.points[0 + (7 * 2)];
+    this.points[7 * ((this.points.length / 7) - 2) + 8] = this.points[1 + (7 * 2)];
+    this.points[7 * ((this.points.length / 7) - 2) + 9] = this.points[2 + (7 * 2)];
+    this.points[7 * ((this.points.length / 7) - 2) + 10] = this.points[3 + (7 * 2)];
 
 
     gl.bindBuffer(gl.ARRAY_BUFFER,          // GLenum 'target' for this GPU buffer 

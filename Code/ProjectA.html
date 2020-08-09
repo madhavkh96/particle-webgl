@@ -1,0 +1,115 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>ProjectA</title>
+  </head>
+	<!--	Create the HTML5 'canvas' element in which we will run WebGL
+	-->
+<style>
+    * {
+		box-sizing: border-box;
+	}
+
+    body {
+		margin: 5px;
+	}
+    .row:after {
+		content: "";
+		display: table;
+		clear: both;
+	}
+	.column {
+		float: left;
+		width: 50.00%;
+		padding: 15px;
+		font-family: Arial, Arial, Helvetica, sans-serif;
+	}
+    .sub-head {
+		color: brown;
+	}
+    .subscript {
+		font-size: 14px;
+	}
+
+</style>
+  <body onload="main()">
+	  <div class="row">
+		  <div class="column">
+			<canvas id="webgl" width="800" height="800">
+    			Please use a browser that supports "canvas"
+			</canvas> 
+		  </div>
+
+		  <div class="column">
+		  	<br>
+		  	<h1>Particle System Controls:</h1>
+		  	<h3 class="sub-head">Common Controls:</h3>
+			<b> W, A, S and D Keys:</b> to move around<br />
+			<b> Up, Left, Down and Right Arrow Keys:</b> to look around <br />
+			  <b> Left Shift Key: </b>  Move in Vertical Direction - Up.<br />
+			  <b> Left Control Key: </b> Move in Vertical Direction - Down <br />
+
+		  	<b>r/R key:</b> Interact with different systems by adding Random Force.<br />
+		  	<b>Space-bar:</b> Single-Step. <br />
+		  	<b>p or P key:</b> Pause/Resume.<br />
+		  	<b>c or C key:</b> Toggle Streaks(clear-screen).<br />
+		  	<b>f or F:</b> Toggle between different particle Systems <br />
+		  	<h3 class="sub-head"> Bouncy Balls Controls:</h3>
+		  	<p> You can change the <b>Number of particles</b> as well as the <b>type of solver,</b> <br /> from the DAT.GUI Widget on the left of the screen. Press <b>Reload</b> after inputting the values.</p>
+
+		  	<h3 class="sub-head"> Fire Particles Controls:</h3>
+		  	<p> You can change the <b>Number of particles</b> as well as the <b>type of solver,</b> <br /> from the DAT.GUI Widget on the left of the screen. Press <b>Reload</b> after inputting the values.</p>
+
+		  	<h3 class="sub-head"> Tornado Particle Controls:</h3>
+		  	<p> You can change the <b>Number of particles</b> as well as the <b>type of solver,</b> <br /> from the DAT.GUI Widget on the left of the screen. Press <b>Reload</b> after inputting the values.</p>
+
+		  	<h3 class="sub-head"> Springy Tetrahedron Particle Controls:</h3>
+			  <p> You can change a number of parameters here: <br />
+			  The <b>Rest Length, Spring Coefficient (k) and the dampness Coefficient of a spring.</b> <br />
+			  Along with that you can change the type of solver as well. <br />
+			  <p class="subscript"><b><i>NOTE: THESE ONLY TAKE EFFECT IF THE RELOAD BUTTON IS PRESSED.</i></b></p>
+			  </p>
+
+		  	<h3 class="sub-head"> Boids Particle Controls:</h3>
+			  <p>There's an aggressor in the middle of the box defined by another box which<br />
+			  repels any particle which gets too close. Change the aggressor's settings from the <br />
+			  DAT.GUI Console.</p>
+
+		  	<!-- Make 'div' elements to hold changeable HTML made in our JavaScript file;
+		 (where? look at the end of 'BouncyBall03.js' at
+			myKeyPress(), myKeyDown() and myKeyUp() fcns)
+	-->
+		  	<p class="subscript">
+				  <i><b>Name : Madhav Khanna,  NETID: MKO6761 </b></i>
+		  		<!--<button type="button" onclick="onPlusButton()">++More</button>
+		  		<button type="button" onclick="onMinusButton()">--Less</button>
+		  		Buttons adjust 'r' or 'R' key strength <br>
+		  		Open Console, please (right-click->'Inspect Element'->'Console' tab)-->
+
+		  	</p>
+		  </div>
+	  </div>
+	<!--	Load in the JavaScript libraries supplied by our textbook 
+			(Matsuda et al., 2013 WebGL Programming Guide) that help us
+			with WebGL programming:
+	-->
+    <script src="../lib/webgl-utils.js"></script>
+    <script src="../lib/webgl-debug.js"></script>
+    <script src="../lib/cuon-utils.js"></script>
+	  <script src="../lib/build/dat.gui.js"></script>
+	<!-- We modified the library cuon-matrix.js from the book 
+		"WebGL Programming Guide"(K. Matsuda, 2013),
+		to add matrix-stack and quaternion capabilities, 
+		and renamed it cuon-matrix-quat.js -->
+    <script src="../lib/cuon-matrix-quat03.js"></script> 
+	<!--	Finally, load in our own JavaScript program files:
+	-->
+		<script src="VboBox.js"></script>
+		<script src="Forcer.js"></script>
+		<script src="Limit.js"></script>
+	    <script src="PartSysType.js"></script>
+		<script src="PartSys.js"></script>
+    <script src="ProjectA.js"></script>
+  </body>
+</html>

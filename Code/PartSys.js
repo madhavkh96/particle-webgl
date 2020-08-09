@@ -1190,9 +1190,9 @@ PartSys.prototype.initFlocking = function(count, shader) {
         this.s1[j + PART_ZPOS] = -0.8 + 0.1 * this.randZ;
         this.s1[j + PART_WPOS] = 1.0;      // position 'w' coordinate;
         this.roundRand(); // Now choose random initial velocities too:
-        this.s1[j + PART_XVEL] = this.INIT_VEL * (0.4 + 0.2 * this.randX) * 0.5;
+        this.s1[j + PART_XVEL] = this.INIT_VEL * (0.4 + 0.2 * this.randX);
         this.s1[j + PART_YVEL] = this.INIT_VEL * (0.4 + 0.2 * this.randY) * 0.1;
-        this.s1[j + PART_ZVEL] = this.INIT_VEL * (0.4 + 0.2 * this.randZ) * 0.5;
+        this.s1[j + PART_ZVEL] = this.INIT_VEL * (0.4 + 0.2 * this.randZ);
         this.s1[j + PART_MASS] = 1.0;      // mass, in kg.
         this.s1[j + PART_DIAM] = this.size; // on-screen diameter, in pixels
         this.s1[j + PART_RENDMODE] = 0.0;
@@ -2671,10 +2671,11 @@ PartSys.prototype.particleBehaviour = function () {
             }
 
 
+            this.forceList[this.forceList.length - 1].bub_force = boids_aggressorForce;
+            this.forceList[this.forceList.length - 1].bub_force_applicable_distance = boids_aggressorAffectDistance;
+
             if (boids_ControlBox) {
                 this.forceList[this.forceList.length - 1].bub_ctr = new Vector4([boids_aggressorX, boids_aggressorY, boids_aggressorZ, 1.0]);
-                this.forceList[this.forceList.length - 1].bub_force = boids_aggressorForce;
-                this.forceList[this.forceList.length - 1].bub_force_applicable_distance = boids_aggressorAffectDistance;
             }
 
             break;

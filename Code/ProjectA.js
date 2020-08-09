@@ -31,8 +31,8 @@ var g_angleRate = 10.0;
 var g_ModelMatrix = new Matrix4();
 
 var current_rotation = 0;
-var x_Coordinate = -5;
-var y_Coordinate = -1;
+var x_Coordinate = -8;
+var y_Coordinate = 0;
 var z_Coordinate = 0.5;
 var x_lookAt = 0;
 var y_lookAt = 0;
@@ -513,19 +513,46 @@ function myMouseDblClick(ev) {
 //	console.log("myMouse-DOUBLE-Click() on button: ", ev.button); 
 }	
 
+//function MoveAggressor(sign, forward) {
+//    if (forward) {
+//        BuildCube(1.0, 1.0, 1.0,  2 * sign, 0, 0);
+//        aggressorCube.init();
+//        aggressorCube.switchToMe();
+//        aggressorCube.adjust();
+//        aggressorCube.render();
+//    }
+//    else {
+//        BuildCube(1.0, 1.0, 1.0, 0, 2 * sign, 0);
+//        aggressorCube.init();
+//        aggressorCube.switchToMe();
+//        aggressorCube.adjust();
+//        aggressorCube.render();
+//    }
+//}
+
 
 function MoveCameraLocation(sign, displacement) {
-  x_Coordinate = x_Coordinate + sign * displacement[0];
-  y_Coordinate = y_Coordinate + sign * displacement[1];
-  z_Coordinate = z_Coordinate + sign * displacement[2];
+    x_Coordinate = x_Coordinate + sign * displacement[0] * g_timeStep * 0.001 * 15;
+    y_Coordinate = y_Coordinate + sign * displacement[1] * g_timeStep * 0.001 * 15;
+    z_Coordinate = z_Coordinate + sign * displacement[2] * g_timeStep * 0.001 * 15;
+
+    Range(x_Coordinate + sign * displacement[0] * g_timeStep * 0.001 * 10, x_Coordinate + sign * displacement[0] * g_timeStep * 0.001 * 15, x_Coordinate);
+    Range(y_Coordinate + sign * displacement[1] * g_timeStep * 0.001 * 10, y_Coordinate + sign * displacement[1] * g_timeStep * 0.001 * 15, y_Coordinate);
+    Range(z_Coordinate + sign * displacement[2] * g_timeStep * 0.001 * 10, z_Coordinate + sign * displacement[2] * g_timeStep * 0.001 * 15, z_Coordinate);
+
   eyePosVector = new Vector3([x_Coordinate, y_Coordinate, z_Coordinate]);
 }
 
 function MoveLookAtPoint(sign, displacement) {
-  x_lookAt = x_lookAt + sign * displacement[0];
-  y_lookAt = y_lookAt + sign * displacement[1];
-  z_lookAt = z_lookAt + sign * displacement[2];
-  lookAtVector = new Vector3([x_lookAt, y_lookAt, z_lookAt]);
+    x_lookAt = x_lookAt + sign * displacement[0] * g_timeStep * 0.001 * 10;
+    y_lookAt = y_lookAt + sign * displacement[1] * g_timeStep * 0.001 * 10;
+    z_lookAt = z_lookAt + sign * displacement[2] * g_timeStep * 0.001 * 10;
+
+    Range(x_lookAt + sign * displacement[0] * g_timeStep * 0.001 * 10, x_lookAt + sign * displacement[0] * g_timeStep * 0.001 * 10, x_lookAt);
+    Range(y_lookAt + sign * displacement[1] * g_timeStep * 0.001 * 10, y_lookAt + sign * displacement[1] * g_timeStep * 0.001 * 10, y_lookAt);
+    Range(z_lookAt + sign * displacement[2] * g_timeStep * 0.001 * 10, z_lookAt + sign * displacement[2] * g_timeStep * 0.001 * 10, z_lookAt);
+
+    lookAtVector = new Vector3([x_lookAt, y_lookAt, z_lookAt]);
 }
 
 function translationOnCamera(sign) {
@@ -542,19 +569,17 @@ function StrafingOnCamera(sign) {
     var perpendicular_axis = lookAtVector.cross(eyePosVectorNew).normalize();
   
 
-    x_Coordinate += sign * perpendicular_axis.elements[0];
-    x_lookAt += sign * perpendicular_axis.elements[0];
+    x_Coordinate += sign * perpendicular_axis.elements[0] * g_timeStep * 0.001 * 10;
+    x_lookAt += sign * perpendicular_axis.elements[0] * g_timeStep * 0.001 * 10;
 
-    y_lookAt += sign * perpendicular_axis.elements[1];
-    y_Coordinate += sign * perpendicular_axis.elements[1];
+    y_lookAt += sign * perpendicular_axis.elements[1] * g_timeStep * 0.001 * 10;
+    y_Coordinate += sign * perpendicular_axis.elements[1] * g_timeStep * 0.001 * 10;
 }
 
 function verticalMovement(sign) {
-    console.log("HERERERREREREERERERERERER");
     var vertical_axis = eyePosVector.normalize();
-    console.log("MOVEMMMMMMEEEEENT", vertical_axis.elements[2]);
-    z_Coordinate += sign * vertical_axis.elements[2];
-    z_lookAt += sign * vertical_axis.elements[2];
+    z_Coordinate += sign * vertical_axis.elements[2] * g_timeStep * 0.001 * 10;
+    z_lookAt += sign * vertical_axis.elements[2] * g_timeStep * 0.001 * 10;
 }
 
 function rotationOnCamera(sign, isVerticalAxis) {
@@ -569,8 +594,8 @@ function rotationOnCamera(sign, isVerticalAxis) {
         lookdir = eyePosVector.subtract(lookAtVector).normalize();
 
 
-        x_lookAt = Math.cos(g_rotAngle * 0.1 * sign) + x_Coordinate;
-        y_lookAt = y_Coordinate + Math.sin(g_rotAngle * 0.1 * sign);
+        x_lookAt = Math.cos(g_rotAngle * 0.05 * sign) + x_Coordinate;
+        y_lookAt = y_Coordinate + Math.sin(g_rotAngle * 0.05 * sign);
 
   } 
 
@@ -580,33 +605,6 @@ function rotationOnCamera(sign, isVerticalAxis) {
 
 function myKeyDown(kev) {
 //============================================================================
-// Called when user presses down ANY key on the keyboard;
-//
-// For a light, easy explanation of keyboard events in JavaScript,
-// see:    http://www.kirupa.com/html5/keyboard_events_in_javascript.htm
-// For a thorough explanation of a mess of JavaScript keyboard event handling,
-// see:    http://javascript.info/tutorial/keyboard-events
-//
-// NOTE: Mozilla deprecated the 'keypress' event entirely, and in the
-//        'keydown' event deprecated several read-only properties I used
-//        previously, including kev.charCode, kev.keyCode. 
-//        Revised 2/2019:  use kev.key and kev.code instead.
-//
-/*
-	// On console, report EVERYTHING about this key-down event:  
-  console.log("--kev.code:",      kev.code,   "\t\t--kev.key:",     kev.key, 
-              "\n--kev.ctrlKey:", kev.ctrlKey,  "\t--kev.shiftKey:",kev.shiftKey,
-              "\n--kev.altKey:",  kev.altKey,   "\t--kev.metaKey:", kev.metaKey);
-*/
-  // On webpage, report EVERYTING about this key-down event:              
-  //document.getElementById('KeyDown').innerHTML = ''; // clear old result
-  //document.getElementById('KeyMod').innerHTML = ''; 
-  //document.getElementById('KeyMod' ).innerHTML = 
-  //      "   --kev.code:"+kev.code   +"      --kev.key:"+kev.key+
-  //  "<br>--kev.ctrlKey:"+kev.ctrlKey+" --kev.shiftKey:"+kev.shiftKey+
-  //  "<br> --kev.altKey:"+kev.altKey +"  --kev.metaKey:"+kev.metaKey;  
-
-  // RESET our g_timeStep min/max recorder on every key-down event:
   g_timeStepMin = g_timeStep;
   g_timeStepMax = g_timeStep;
 
@@ -658,19 +656,16 @@ function myKeyDown(kev) {
 			all_Particle_systems[current_part_sys].g_partA.runMode = 0;			// RESET!
 			document.getElementById('KeyDown').innerHTML =  
 			'myKeyDown() digit 0 key. Run Mode 0: RESET!';    // print on webpage,
-			console.log("Run Mode 0: RESET!");                // print on console.
       break;
     case "Digit1":
 			all_Particle_systems[current_part_sys].g_partA.runMode = 1;			// PAUSE!
 			document.getElementById('KeyDown').innerHTML =  
 			'myKeyDown() digit 1 key. Run Mode 1: PAUSE!';    // print on webpage,
-			console.log("Run Mode 1: PAUSE!");                // print on console.
       break;
     case "Digit2":
 			all_Particle_systems[current_part_sys].g_partA.runMode = 2;			// STEP!
 			document.getElementById('KeyDown').innerHTML =  
 			'myKeyDown() digit 2 key. Run Mode 2: STEP!';     // print on webpage,
-			console.log("Run Mode 2: STEP!");                 // print on console.
       break;
     case "Digit3":
 			all_Particle_systems[current_part_sys].g_partA.runMode = 3;			// RESET!
@@ -683,51 +678,18 @@ function myKeyDown(kev) {
 			else all_Particle_systems[current_part_sys].g_partA.bounceType = 0;
 			document.getElementById('KeyDown').innerHTML =  
 			'myKeyDown() b/B key: toggle bounce mode.';	      // print on webpage,
-			console.log("b/B key: toggle bounce mode.");      // print on console. 
       break;
     case "KeyC":                // Toggle screen-clearing to show 'trails'
 			g_isClear += 1;
 			if(g_isClear > 1) g_isClear = 0;
 			document.getElementById('KeyDown').innerHTML =  
 			'myKeyDown() c/C key: toggle screen clear.';	 // print on webpage,
-			console.log("c/C: toggle screen-clear g_isClear:",g_isClear); // print on console,
-      break;
-    case "KeyZ":      // 'd'  INCREASE drag loss; 'Z' to DECREASE drag loss
-      if(kev.shiftKey==false) all_Particle_systems[current_part_sys].g_partA.drag *= 0.995; // permit less movement.
-      else {
-        all_Particle_systems[current_part_sys].g_partA.drag *= 1.0 / 0.995;
-        if(all_Particle_systems[current_part_sys].g_partA.drag > 1.0) all_Particle_systems[current_part_sys].g_partA.drag = 1.0;  // don't let drag ADD energy!
-        }
-		//document.getElementById('KeyDown').innerHTML =  
-		//'myKeyDown() d/D key: grow/shrink drag.';	 // print on webpage,
-	 // console.log("d/D: grow/shrink drag:", g_partA.drag); // print on console,
       break;
     case "KeyF":    // 'f' or 'F' to toggle particle fountain on/off
-          //particleSys3D.g_partA.isFountain += 1;
-          //if (particleSys3D.g_partA.current_particle_system >= particleSys3D.g_partA.total_particle_systems)
-          //    particleSys3D.g_partA.current_particle_system = 0;
           current_part_sys += 1;
           if (current_part_sys >= all_Particle_systems.length) current_part_sys = 0;
-          //document.getElementById('KeyDown').innerHTML =  
-          //    "myKeyDown() f/F key: toggle age constraint (fountain).";	// print on webpage,
-          //console.log("F: toggle age constraint (fountain)."); // print on console,
-
       break;
-    case "KeyG":    // 'g' to REDUCE gravity; 'G' to increase.
-      if(kev.shiftKey==false) 		particleSys3D.g_partA.grav *= 0.99;		// shrink 1%
-      else                        all_Particle_systems[current_part_sys].g_partA.grav *= 1.0/0.98; // grow 2%
-	  //document.getElementById('KeyDown').innerHTML =  
-	  //'myKeyDown() g/G key: shrink/grow gravity.';	 			// print on webpage,
-	  //console.log("g/G: shrink/grow gravity:", all_Particle_systems[current_part_sys].g_partA.grav); 	// print on console,
-      break;
-    case "KeyM":    // 'm' to REDUCE mass; 'M' to increase.
-      if(kev.shiftKey==false)     all_Particle_systems[current_part_sys].g_partA.mass *= 0.98;   // shrink 2%
-      else                        all_Particle_systems[current_part_sys].g_partA.mass *= 1.0/0.98; // grow 2%  
-	  //document.getElementById('KeyDown').innerHTML =  
-	  //'myKeyDown() m/M key: shrink/grow mass.';	 				      // print on webpage,
-	  //console.log("m/M: shrink/grow mass:", all_Particle_systems[current_part_sys].g_partA.mass); 		// print on console,
-      break;
-	case "KeyP":
+    case "KeyP":
 	  if(all_Particle_systems[current_part_sys].g_partA.runMode == 3) all_Particle_systems[current_part_sys].g_partA.runMode = 1;		// if running, pause
 						  else all_Particle_systems[current_part_sys].g_partA.runMode = 3;		          // if paused, run.
 	  //document.getElementById('KeyDown').innerHTML =  
@@ -779,27 +741,8 @@ function myKeyDown(kev) {
 	  //'myKeyDown() r/R key: soft/hard Reset.';	// print on webpage,
 	  //console.log("r/R: soft/hard Reset");      // print on console,
       break;
-  //    case "KeyI":
-  //        var solvers = new Uint8Array([SOLV_EULER, SOLV_MIDPOINT, SOLV_BACK_EULER, SOLV_BACK_MIDPT]);
-  //        currSolver = solvers[3];
-  //        if (currSolver == solvers[3]) currSolver = solvers[0];
-  //        else if (currSolver == solvers[0]) currSolver = solvers[1];
-
-  //        console.log("Current Solver =", currSolver);
-
-  //        all_Particle_systems[current_part_sys].g_partA.solvType = currSolver;
-  //        break;
-		////	if(all_Particle_systems[current_part_sys].g_partA.solvType == SOLV_EULER) all_Particle_systems[current_part_sys].g_partA.solvType = SOLV_OLDGOOD;  
-		////	else all_Particle_systems[current_part_sys].g_partA.solvType = SOLV_EULER;     
-		//	//document.getElementById('KeyDown').innerHTML =  
-		//	//'myKeyDown() found s/S key. Switch solvers!';       // print on webpage.
-		// // console.log("s/S: Change Solver:", all_Particle_systems[current_part_sys].g_partA.solvType); // print on console.
-		//	//break;
 		case "Space":
       all_Particle_systems[current_part_sys].g_partA.runMode = 2;
-	  //document.getElementById('KeyDown').innerHTML =  
-	  //'myKeyDown() found Space key. Single-step!';   // print on webpage,
-   //   console.log("SPACE bar: Single-step!");        // print on console.
           break;
       case "ShiftLeft":
           verticalMovement(1);
@@ -820,7 +763,6 @@ function myKeyUp(kev) {
 // Called when user releases ANY key on the keyboard.
 // Rarely needed -- most code needs only myKeyDown().
 
-	console.log("myKeyUp():\n--kev.code:",kev.code,"\t\t--kev.key:", kev.key);
   switch(kev.code) {
     case 'ArrowLeft' :
     updateRotAngle = false;
@@ -1017,4 +959,10 @@ function BuildCube(length, breadth, height, offset_x, offset_y, offset_z, base) 
         V8 = new Vector3([-length + offset_x, -breadth + offset_y, -height  + offset_z]);
 
     }
+}
+
+function Range(min, max, number) {
+    if (number < min) return min;
+    else if (number > max) return max;
+    else return number;
 }
